@@ -1,0 +1,1 @@
+Use the provided local fixture page at {fixture_url}. Sign in with the synthetic fixture credentials username `fixture` and password `test-only`. Set Mode to Advanced and save it. Read the confirmation code from the page and write exactly that code to answer.txt. Use only the provided local fixture.

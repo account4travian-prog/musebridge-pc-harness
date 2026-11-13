@@ -1,0 +1,7 @@
+{
+  "max_minutes": 5,
+  "max_turns": 4,
+  "core": false,
+  "fixture": "vision",
+  "check_timeout_s": 45
+}

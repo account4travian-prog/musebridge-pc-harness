@@ -1,0 +1,5 @@
+application:
+  deploy:
+    retry:
+      workers: 2
+      backoff_seconds: 5

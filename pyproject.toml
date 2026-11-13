@@ -1,0 +1,46 @@
+[project]
+name = "musebridge"
+version = "0.7.0"
+requires-python = ">=3.13"
+dependencies = [
+    "musegadget",
+    "PySide6",
+    "pyserial",
+    "pywin32; sys_platform == 'win32'",
+    "playwright>=1.65.0",
+    "pywinauto>=0.6.9",
+    "sounddevice>=0.5.6",
+    "pillow>=13.0.0",
+    "mcp>=2.3,<3",
+    "pywinpty>=3,<4",
+    "pypdf>=6,<7",
+    "pyte>=0.8,<0.9",
+    "pathspec>=0.12,<2",
+    "regex>=2024.0,<2027",
+    "winrt-windows-media-ocr>=4!10.0.28000.2957 ; sys_platform == 'win32'",
+    "winrt-windows-graphics-imaging>=4!10.0.28000.2957 ; sys_platform == 'win32'",
+    "winrt-windows-storage-streams>=4!10.0.28000.2957 ; sys_platform == 'win32'",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "platformio",
+    "pyyaml>=6,<7",
+]
+
+[tool.uv.sources]
+musegadget = { path = "vendor/muse-gadget-sdk/linux", editable = true }
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["musebridge*"]
+
+[tool.setuptools.package-data]
+musebridge = ["assets/*.ico"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

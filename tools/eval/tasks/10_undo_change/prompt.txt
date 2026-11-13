@@ -1,0 +1,1 @@
+In notes.txt, change status from original to reviewed. Save and confirm the changed file. Do not undo the change yet, and do not create or modify any other project file.

@@ -1,0 +1,32 @@
+{
+  "chosen_mode": "exact",
+  "modes": {
+    "exact": {
+      "edit_calls": 3,
+      "exact_bytes": true,
+      "failed_edit_calls": 0,
+      "failure_count": 0,
+      "forbidden_substitute_used": false,
+      "makefile_exact": true,
+      "mode": "exact",
+      "python_exact": true,
+      "run_state": "remote_finished",
+      "settled": true,
+      "unexpected_tools": []
+    },
+    "line": {
+      "edit_calls": 3,
+      "exact_bytes": true,
+      "failed_edit_calls": 0,
+      "failure_count": 0,
+      "forbidden_substitute_used": false,
+      "makefile_exact": true,
+      "mode": "line",
+      "python_exact": true,
+      "run_state": "remote_finished",
+      "settled": true,
+      "unexpected_tools": []
+    }
+  },
+  "schema_version": 1
+}

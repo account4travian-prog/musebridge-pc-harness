@@ -1,0 +1,189 @@
+{
+  "main_ack_keys": [
+    "channel",
+    "is_thread",
+    "message_id",
+    "reply_to_message_id",
+    "session_id"
+  ],
+  "main_ack_session_present": true,
+  "main_state": "acknowledged",
+  "tracker": {
+    "busy": false,
+    "task_finished": false,
+    "replies": 1,
+    "bound_done": 0,
+    "user_echo_reply": true
+  },
+  "events": [
+    {
+      "event": "task.status",
+      "payload_keys": [
+        "active_subagent_count",
+        "agent_id",
+        "is_thread",
+        "root_agent_id",
+        "session_id",
+        "status",
+        "task_id"
+      ],
+      "has_parent": false,
+      "parent_matches_ack": false,
+      "message_matches_ack": false,
+      "session_matches_ack": true,
+      "status": "running"
+    },
+    {
+      "event": "task.status",
+      "payload_keys": [
+        "active_subagent_count",
+        "agent_id",
+        "is_thread",
+        "root_agent_id",
+        "session_id",
+        "status",
+        "task_id"
+      ],
+      "has_parent": false,
+      "parent_matches_ack": false,
+      "message_matches_ack": false,
+      "session_matches_ack": true,
+      "status": "running"
+    },
+    {
+      "event": "agent.status",
+      "payload_keys": [
+        "activity_code",
+        "activity_text",
+        "agent_id",
+        "is_thread",
+        "message_id",
+        "session_id"
+      ],
+      "has_parent": false,
+      "parent_matches_ack": false,
+      "message_matches_ack": false,
+      "session_matches_ack": true,
+      "status": "other"
+    },
+    {
+      "event": "agent.status",
+      "payload_keys": [
+        "activity_code",
+        "activity_text",
+        "agent_id",
+        "is_thread",
+        "message_id",
+        "session_id"
+      ],
+      "has_parent": false,
+      "parent_matches_ack": false,
+      "message_matches_ack": false,
+      "session_matches_ack": true,
+      "status": "other"
+    },
+    {
+      "event": "delta.message_start",
+      "payload_keys": [
+        "agent_id",
+        "chat_context",
+        "is_thread",
+        "message_id",
+        "message_seq",
+        "metadata",
+        "parent_agent_id",
+        "reply_to_message_id",
+        "resources",
+        "seq",
+        "session_id",
+        "transcript_surface"
+      ],
+      "has_parent": false,
+      "parent_matches_ack": false,
+      "message_matches_ack": false,
+      "session_matches_ack": true,
+      "status": "other"
+    },
+    {
+      "event": "agent.status",
+      "payload_keys": [
+        "activity_code",
+        "activity_text",
+        "agent_id",
+        "is_thread",
+        "message_id",
+        "session_id"
+      ],
+      "has_parent": false,
+      "parent_matches_ack": false,
+      "message_matches_ack": false,
+      "session_matches_ack": true,
+      "status": "other"
+    },
+    {
+      "event": "agent.status",
+      "payload_keys": [
+        "activity_code",
+        "activity_text",
+        "agent_id",
+        "is_thread",
+        "session_id"
+      ],
+      "has_parent": false,
+      "parent_matches_ack": false,
+      "message_matches_ack": false,
+      "session_matches_ack": true,
+      "status": "other"
+    },
+    {
+      "event": "delta.message_done",
+      "payload_keys": [
+        "actions",
+        "agent_id",
+        "chat_context",
+        "is_thread",
+        "message_id",
+        "message_seq",
+        "parent_agent_id",
+        "presentations",
+        "reply_to_message_id",
+        "resources",
+        "seq",
+        "session_id",
+        "status",
+        "transcript",
+        "transcript_surface",
+        "widgets"
+      ],
+      "has_parent": false,
+      "parent_matches_ack": false,
+      "message_matches_ack": false,
+      "session_matches_ack": true,
+      "status": "completed"
+    },
+    {
+      "event": "task.status",
+      "payload_keys": [
+        "active_subagent_count",
+        "agent_id",
+        "is_thread",
+        "root_agent_id",
+        "session_id",
+        "status",
+        "task_id"
+      ],
+      "has_parent": false,
+      "parent_matches_ack": false,
+      "message_matches_ack": false,
+      "session_matches_ack": true,
+      "status": "completed"
+    }
+  ],
+  "unbound": {
+    "shell_calls": 1,
+    "clear_error_returned": true,
+    "muse_understood_no_project": true,
+    "device_error_unknown": false,
+    "no_jobs": true
+  }
+}

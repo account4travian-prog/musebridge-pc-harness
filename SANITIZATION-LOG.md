@@ -1,61 +1,48 @@
-# Sanitization Log
+# Sanitization log
 
-How this public copy was produced from internal working notes.
-Removed strings are described by class only; nothing personal is
-quoted in this file.
+This repository is a public copy of a private working tree, reviewed before
+publication. This file records the classes of change made, not the values
+removed.
 
-## Method
+## Included
 
-The internal harness package (a design README, a game plan, an
-inventory, and a board photo) was copied to a fresh staging tree.
-The README and the ESP32 workaround guide were rewritten fresh for
-publication. The game plan and the inventory were transformed by
-scripted class replacements, then hand-edited for coherence, and the
-whole tree passed a denylist verification scan (below). The original
-notes were not modified. Git history starts fresh in this repository;
-no internal history was carried over.
+- Application source (`musebridge/`), tests (`tests/`), development tools
+  and the evaluation suite (`tools/`), ESP32 provisioning firmware
+  (`firmware/serial-ble/`, build outputs excluded), design documents
+  (`docs/`, plus the root planning documents), dated acceptance receipts
+  (`evidence/`), dependency lockfile, and the board photograph.
 
-## Classes of change
+## Excluded entirely
 
-1. **Personal names.** The PC owner's name and his agent's name were
-   replaced throughout with role words ("the owner", "the agent").
-   The owner's name appears only in `LICENSE`, as intended.
-2. **Machine fingerprints.** The PC's hostname, a private network
-   address, the VPN product name in the route description, an
-   existing WSL distribution's name, exact OS build number, exact
-   disk figures, and a GPU model were removed or generalized.
-3. **Private infrastructure.** The internal route to the PC is
-   described generically (cloud VM, proxy, VPN tunnel, SSH). Internal
-   helper and task names were removed.
-4. **Other projects' tooling and accounts.** A table of unrelated
-   local development tools, their exact versions, their billing
-   arrangements, and internal model rules were cut. The harness does
-   not depend on them.
-5. **Internal instructions and status labels.** Standing internal
-   orders, per-project status tags, and chat timestamps were removed
-   or rewritten as plain prose. Public copy carries no internal
-   status labels.
-6. **Photo metadata.** The board photo was re-encoded with all EXIF
-   metadata stripped (the original carried a phone model and a
-   timestamp) and renamed generically.
-7. **Dates and times.** Chat-level timestamps and time zones were
-   removed; research dates were generalized to month and year.
+- The upstream Muse Gadget SDK checkout (`vendor/muse-gadget-sdk/`): a
+  large separate project under its own license that also contains a device
+  signing key. `vendor/PINNED.md` records the exact upstream revision to
+  fetch.
+- Local runtime state (`.local/`), the owner's PC workspace folder,
+  virtual environments, test caches, firmware build outputs (`.pio/`).
 
-## Verification
+## Replaced with generic terms
 
-Denylist scans over the staged tree, all clean except the items
-dispositioned here:
+- The owner's name (kept only in the LICENSE copyright line) and the names
+  of the owner's AI assistants and internal model seats, replaced in prose
+  with role descriptions ("the owner", "the Muse agent", "the
+  implementation agent", "a helper model"). Development-history documents
+  are otherwise preserved as written, including dates and work-item codes.
+- Personal account addresses, the home network name, private IP addresses
+  and the paired device's identifier suffix.
+- Local absolute paths in test fixtures (a fictional example user).
+- Conversation and run identifiers in evidence tables and in one probe
+  script, replaced with placeholders.
+- A synthetic form-fixture name in the evaluation tasks.
 
-- Secret patterns (key and token prefixes, private-key markers,
-  bearer strings, credential keywords). One benign hit: the word
-  "password" in a security instruction sentence in
-  `docs/ESP32-BLE-FRONTEND.md`. No credential material.
-- Personal identifiers: email pattern, phone pattern, the owner's
-  surname, family names, home town, county, and employer. Zero hits
-  outside `LICENSE`.
-- Machine fingerprints: home-directory path patterns, user folder
-  paths, hostnames. Zero hits.
-- Em dashes and en dashes in public prose: zero.
-- File inventory: no `.env` files, key files, credential files,
-  logs, archives, databases, or internal documents. One image, the
-  board photo, with metadata verified stripped after re-encoding.
+## Checks run before publication
+
+- Automated secret scanning (gitleaks) over the full tree: no findings.
+- Denylist greps for names, addresses, device and account identifiers and
+  internal terms: no hits outside the LICENSE.
+- The board photograph was re-encoded to strip EXIF metadata (the original
+  carried a phone model and timestamp).
+- Python sources byte-compile clean after edits.
+
+Fixture strings inside tests (for example a value that looks like a token,
+used to verify redaction) are synthetic test data, reviewed individually.

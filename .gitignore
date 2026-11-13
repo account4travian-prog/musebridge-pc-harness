@@ -1,26 +1,17 @@
-# Pairing state is a credential. Never commit it.
+.venv/
+__pycache__/
+.pytest_cache/
+firmware/serial-ble/.pio/
+*.egg-info/
+*.log
+!tools/eval/tasks/**/*.log
+.local/
+/PC-Workspace/
+vendor/muse-gadget-sdk/
+
+# Public-copy additions: never commit identity or credential material
 identity.json
 pairing.json
-*.pairing.json
-/var/
-
-# Secrets and local configuration
-.env
-.env.*
-!.env.example
 *.pem
-*.key
-*.p12
-*.keystore
-*credentials*
-*secret*
-*token*
-
-# Runtime and build output
-__pycache__/
-node_modules/
-*.log
-.local/
-dist/
-build/
-*.zip
+.env
+*.token

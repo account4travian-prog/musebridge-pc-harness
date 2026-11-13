@@ -1,0 +1,1 @@
+build.ps1 fails because its output path contains spaces. Fix the script so it reads `My Files/input.txt` and writes exactly `space-safe output` to `output file.txt`. Run it and verify the output file.

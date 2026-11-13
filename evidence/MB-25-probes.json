@@ -1,0 +1,94 @@
+{
+  "P-1-45": {
+    "finished": true,
+    "state": "remote_finished",
+    "send_to_settled_s": 67.936,
+    "tool": "probe.sleep",
+    "requested_s": 45,
+    "called": true,
+    "local_completed": true,
+    "elapsed_s": 45.01,
+    "jpeg_bytes": null,
+    "requested_timeout_ms": 125000,
+    "jpeg_sha256": null,
+    "correct_code": true,
+    "valid_observation": true,
+    "calls": 2,
+    "failed_calls": 0,
+    "unexpected_tools": []
+  },
+  "P-1-150": {
+    "finished": true,
+    "state": "remote_finished",
+    "send_to_settled_s": 182.992,
+    "tool": "probe.sleep",
+    "requested_s": 150,
+    "called": true,
+    "local_completed": true,
+    "elapsed_s": 150.013,
+    "jpeg_bytes": null,
+    "requested_timeout_ms": 125000,
+    "jpeg_sha256": null,
+    "correct_code": false,
+    "valid_observation": false,
+    "calls": 12,
+    "failed_calls": 0,
+    "unexpected_tools": [
+      "run.calls",
+      "run.list",
+      "workspace.list"
+    ]
+  },
+  "P-1-decision": {
+    "inline_cap_s": 25
+  },
+  "P-2-picture": {
+    "finished": true,
+    "state": "remote_finished",
+    "send_to_settled_s": 25.599,
+    "tool": "probe.picture",
+    "requested_s": null,
+    "called": true,
+    "local_completed": true,
+    "elapsed_s": null,
+    "jpeg_bytes": 7231,
+    "requested_timeout_ms": 30000,
+    "jpeg_sha256": "ff5d9294971b3f9049360b03d631d1a1366868a79774bf3fb7b48621f1d48aec",
+    "correct_code": false,
+    "valid_observation": false,
+    "calls": 1,
+    "failed_calls": 0,
+    "unexpected_tools": []
+  },
+  "P-2-camera": {
+    "finished": true,
+    "state": "remote_finished",
+    "send_to_settled_s": 22.353,
+    "tool": "camera.capture",
+    "requested_s": null,
+    "called": true,
+    "local_completed": true,
+    "elapsed_s": null,
+    "jpeg_bytes": 7920,
+    "requested_timeout_ms": 30000,
+    "jpeg_sha256": "46a076cb986dd8c7b4002e28d6b02fc005b70b8448885d5e552d3ffc887b1e00",
+    "correct_code": false,
+    "valid_observation": false,
+    "calls": 1,
+    "failed_calls": 0,
+    "unexpected_tools": []
+  },
+  "P-2-decision": {
+    "route": "B"
+  },
+  "P-3-baseline": {
+    "finished": true,
+    "state": "remote_finished",
+    "send_to_settled_s": 32.9,
+    "edit_calls": 3,
+    "failed_edit_calls": 0,
+    "python_exact": true,
+    "makefile_exact": true,
+    "only_edit_mutations": true
+  }
+}

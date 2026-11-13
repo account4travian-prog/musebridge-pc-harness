@@ -1,0 +1,1 @@
+Inspect only the pixels in the provided owned fixture window {window_handle}. The six-digit code appears only in the image. Write the code to answer.txt and report it. Do not use shell, logs, fixture files, or any text source to discover the code. Do not focus or activate other windows.

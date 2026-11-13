@@ -1,0 +1,1 @@
+Rename legacy_label to display_label everywhere in this five-file Python project. Update every import, call, and test. Preserve CRLF line endings in all five files. Run the test and compile checks.

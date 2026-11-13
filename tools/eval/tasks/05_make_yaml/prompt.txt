@@ -1,0 +1,1 @@
+In settings.yaml change application.deploy.retry.workers from 2 to 3. In the Makefile update the check target to run `python -m pytest tests -q`. Preserve tab indentation for Makefile recipes. Validate the YAML and report both edits.

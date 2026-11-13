@@ -1,0 +1,1 @@
+The small counter package has an off-by-one bug. Fix values_up_to so it follows the documented contract and the tests pass. Do not edit tests/test_counter.py. Run pytest and report the final result.

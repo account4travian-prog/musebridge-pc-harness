@@ -1,0 +1,10 @@
+{
+  "source": "Read-only durable records for the original Main execution probe; request was not resent",
+  "main_context_succeeded": true,
+  "main_shell_succeeded": true,
+  "hostname_jobs": 1,
+  "hostname_exit_zero_and_output_matches_pc": true,
+  "run_finished_attributably": false,
+  "run_state": "interrupted",
+  "replayed": false
+}

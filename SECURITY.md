@@ -1,46 +1,37 @@
 # Security notes
 
-This project is about giving an AI agent a live, authenticated channel into
-a personal computer. That is a powerful shape, so the security notes are
-part of the design, not an afterthought.
-
 ## Pairing state is a credential
 
-The Muse Gadget pairing produces two small state files on the Linux side
-(`identity.json` and `pairing.json` in the gadget client's data directory).
-Whoever holds those files can present as the paired device. Treat them like
-a private key:
+MuseBridge's pairing identity and tokens grant access to the owner's Muse
+account from the paired PC. Treat them accordingly:
 
-- Never commit them to a repository (the shipped `.gitignore` excludes them).
-- Never copy them to a second live machine. One identity belongs on one
-  device; if the state is moved, the old copy must stay off and be retired.
-- If they are ever exposed, unpair the device in the Muse app and pair
-  again from scratch so fresh state is issued.
+- On Windows, identity material is protected with Windows DPAPI in the user
+  profile. Harness databases in the profile are not separately encrypted;
+  keep the profile private.
+- Never commit pairing or identity files. This repository's `.gitignore`
+  excludes them, along with private keys (`*.pem`), `.env` files, and local
+  runtime state (`.local/`).
+- The upstream SDK checkout under `vendor/muse-gadget-sdk/` is deliberately
+  not part of this repository: among other reasons, it contains a device
+  signing key. Fetch it from upstream at the pinned revision instead.
 
-## SDK tokens
+## The ESP32 board
 
-Pairing starts from a token issued at gadgets.muse.ai. The token belongs to
-the person pairing the device. Do not share it, post it, or store it in this
-repository, in screenshots, or in issue reports.
+The provisioning firmware (`firmware/serial-ble/`) contains no token and no
+Wi-Fi credentials, by design. Pairing cryptography runs in the official SDK
+on the PC. The board holds nothing worth extracting.
 
-## Physical confirmation
+## Operating the harness
 
-The ESP32 side of the workaround keeps the upstream gadget SDK's physical
-confirm policy: a person presses the board's button to approve a pairing.
-Keep that step. It is the difference between "a radio that can be paired"
-and "a radio only its owner can pair".
-
-## Scope of access on the PC
-
-A paired Linux gadget client runs commands as the account that installed
-it. Install it under an account whose access you are comfortable giving the
-channel, keep the custom command set as small as the work allows, and review
-custom command definitions before dropping them into the commands folder:
-they execute locally with no further prompt.
+- Desktop control is behind an explicit profile and must refuse to inject
+  input while the owner is actively using the PC.
+- Hook commands and MCP servers run as the Windows user. Review imported
+  hook/plugin JSON before enabling it; imports start disabled.
+- Project selection is a work scope, not an OS security sandbox. Review
+  shell commands, grants and terminal input accordingly.
 
 ## Reporting
 
-If you find a problem in these documents, such as a step that would expose
-pairing state or a command broader than its description, open an issue
-describing the step and the risk. Do not include tokens, pairing files, or
-personal network details in the report.
+This is a personal project published for reference. Security reports are
+welcome via GitHub issues; please do not include live tokens, pairing data
+or private logs in a public issue.

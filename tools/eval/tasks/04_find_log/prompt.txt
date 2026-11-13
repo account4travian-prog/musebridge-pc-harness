@@ -1,0 +1,1 @@
+Search the 300 small log files for error code E-9281. Write the exact timestamp from that matching log line to answer.txt, with no extra text. Do not guess from the filename.

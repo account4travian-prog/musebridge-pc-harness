@@ -1,149 +1,133 @@
-# MuseBridge PC Harness
+# MuseBridge: a Windows companion and local-tools harness for Muse
 
-A design and build guide for giving a Muse personal agent a fast, direct
-harness on a Windows PC: one persistent paired connection, an executor
-running in the user's own Windows session, and none of the relay layers
-that make remote PC work feel slow.
+MuseBridge is a working Windows application that gives an existing Muse agent a
+native presence on a Windows PC: a desktop chat window connected to the agent,
+plus a local tool layer (files, shell, git, terminals, browser, desktop UI
+automation, MCP servers, hooks) that executes on the PC under the owner's
+control. The agent stays remote; there is no local model.
 
-The centerpiece is a workaround for a three-sided problem:
+Version 0.7.0. Functional development build, in daily use by its owner.
 
-1. The open Muse Gadget SDK ships an ESP32 SDK and a Linux SDK. There is
-   no official Windows SDK.
-2. Gadget pairing is Bluetooth-only. The pairing code has no USB, serial,
-   or network pairing transport.
-3. The target PC had no Bluetooth adapter at all.
+## The problem it solves
 
-The workaround: plug an ESP32-S3 board into the PC over USB and let it act
-as a dumb Bluetooth radio for the Linux gadget client running under WSL2.
-The board advertises and forwards raw BLE packets over a serial link. All
-pairing protocol and cryptography stays in the Linux client, which was
-already written transport-agnostic. The PC gets a paired Muse device, and
-nobody had to buy a dongle, fight a Bluetooth stack inside WSL, or wait
-for a Windows SDK.
+Muse pairing is Bluetooth-only, and the official Muse Gadget SDK ships ESP32
+and Linux targets only: there is no Windows SDK, and the reference development
+PC has no Bluetooth adapter at all. Before MuseBridge, reaching the PC meant
+stacking a cloud egress proxy, a VPN tunnel and SSH just to run one command
+(seconds of overhead per action, before any real work).
 
-Full step-by-step instructions are in
-[docs/ESP32-BLE-FRONTEND.md](docs/ESP32-BLE-FRONTEND.md).
+## The workaround, as built
 
-## Why a harness at all
+An ESP32-S3 board acts as a dumb Bluetooth front-end for provisioning, and
+nothing more:
 
-Before this design, reaching the PC meant a relay stack: cloud VM, egress
-proxy, VPN tunnel, SSH into session 0, a scheduled task pickup, a helper
-process in the interactive session, a result written to a file, and a
-separate pull back. Measured on the original setup:
+1. **Firmware** ([`firmware/serial-ble/`](firmware/serial-ble/)): a small,
+   independent Arduino/NimBLE transport (about 115 lines). It advertises with
+   the PC identity the host gives it and forwards raw ATT packets over its
+   USB-UART socket as newline-delimited JSON with base64 payloads. It holds no
+   token, no Wi-Fi credentials and no pairing cryptography.
+2. **Host transport** (`musebridge/serial_ble.py`): a bounded serial transport
+   (115200 baud, 4096-byte frames, per-boot epoch and per-connection generation
+   guards, acknowledged sends for backpressure) that the **unmodified official
+   SDK** pairing code talks to. All pairing cryptography stays in the official
+   Python SDK, running natively on Windows.
+3. **Provisioning only.** Once pairing completes, the board's job is done: the
+   steady-state connection uses the PC's own network, and normal use needs no
+   re-pair and no reflash. The full write-up is
+   [docs/ESP32-BLE-FRONTEND.md](docs/ESP32-BLE-FRONTEND.md).
 
-- A read-only idle check: about 5.5 seconds
-- A trivial SSH command: about 3 seconds
-- A full desktop UI action: 5 to 15 seconds, plus verification round trips
+Hardware: a generic ESP32-S3-WROOM-1 (N16R8, 16 MB flash, 8 MB PSRAM) DevKit
+style board with dual USB-C (a CH343 USB-UART socket, which is the one this
+project uses, plus the S3 native USB socket), Bluetooth 5.0 LE and Wi-Fi.
 
-Every action paid the whole stack before any work happened. Optimizing one
-step does not fix that feel. Removing layers does.
+![The ESP32-S3 board](board-1-esp32-s3-wroom-1-n16r8.jpg)
 
-The target architecture is the gadget model: the PC holds one outbound
-encrypted session open to Muse. Messages and commands flow down that
-session with sub-second dispatch. Execution happens in a process already
-running in the user's interactive session, so there is no session split,
-no SSH handshake per action, no scheduler in the middle, and no polling.
-From the user's side it should feel like a local app, not a website tab
-and not a terminal that needs babysitting.
+## What the app does
 
-## What a paired gadget gives you
+- Native PySide6 chat window (Chat / Activity / Plan views) connected to the
+  owner's Muse over the gadget transport; project-scoped conversations,
+  a guarded request queue, continuity notes and chat handoffs.
+- Local tools executed on the PC: file read/edit with change tracking, shell
+  (PowerShell, cmd, Git Bash) with job handles, git status/diff/worktrees,
+  ConPTY interactive terminals, headless-browser tools, guarded desktop UI
+  automation (UIA first), PDF/DOCX text reading, Windows OCR fallback.
+- Extensibility: local lifecycle hooks and MCP stdio servers with explicit
+  per-tool grants. Desktop control sits behind an explicit profile and refuses
+  to steal input while the owner is active.
+- Pairing state and identity material are protected with Windows DPAPI. No
+  telemetry, no public listener.
 
-Once a machine is paired as a Muse gadget, the agent can use the client's
-built-in commands on that machine:
-
-- `system.run`: run a shell command and return output and exit code
-- `file.read` and `file.write`: read and write files
-- `device.health`: report device state
-
-Programs on the machine can also talk back. The Linux client can send a
-message to the agent, and its chat command opens a live terminal
-conversation with the agent from the PC itself. Custom commands are JSON
-definitions dropped into a commands folder; they appear next to the
-built-ins. The model still runs on Meta's side. The hands are local, the
-brain is not, and no route in this repository changes that.
-
-## The four avenues
-
-The game plan researched four ways to establish the connection. They are
-documented in full in [docs/GAMEPLAN.md](docs/GAMEPLAN.md).
-
-1. **USB Bluetooth dongle into WSL2.** A proven chipset passed into a
-   fresh WSL2 Ubuntu, then the stock Linux gadget client. Every layer is
-   proven somewhere; the full stack is plausible but was not the route
-   chosen, because the parts were already on the desk for avenue 3.
-2. **Donor transplant.** Pair on another Linux machine with Bluetooth,
-   then copy the two pairing state files into the WSL2 install. The
-   pattern is proven in community projects, but it needs a suitable donor
-   machine, and phone apps do not export pairing state in the Linux
-   client's format. Not viable with the hardware on hand.
-3. **Microcontroller boards.** Two sub-routes:
-   - **3a, direct gadget.** A supported ESP32-family board pairs directly
-     and becomes a gadget in its own right: push-to-talk dictation to the
-     agent, status cards on display boards, and a physical button that
-     confirms pairing. It is the harness's physical front end, not PC
-     control.
-   - **3b, ESP32 as a serial BLE front end.** The workaround this repo is
-     built around, described above and in
-     [docs/ESP32-BLE-FRONTEND.md](docs/ESP32-BLE-FRONTEND.md).
-4. **No pairing.** Modernize the existing SSH and UI-automation route into
-   a tidy executor with formal task contracts. It works with no new
-   hardware and no pairing, but the PC never becomes a paired device, and
-   the relay latency stays. Useful as a baseline and a fallback.
+[RUNNING.md](RUNNING.md) documents day-to-day operation;
+[MASTERPLAN.md](MASTERPLAN.md) is the architecture record;
+[docs/DEVELOPMENT-NOTES.md](docs/DEVELOPMENT-NOTES.md) preserves the project's
+own readme from development; the dated files under [evidence/](evidence/) are
+the build's acceptance receipts, kept as written (sanitized, see below).
 
 ## Repository map
 
-- `README.md`: this overview
-- `docs/ESP32-BLE-FRONTEND.md`: the ESP32 Bluetooth workaround, end to end:
-  hardware, architecture, firmware side, host side, WSL2 setup, pairing
-  session, verification gate, negative tests, troubleshooting, fallbacks
-- `docs/GAMEPLAN.md`: the full game plan for all four avenues, with the
-  acceptance bar any route has to meet
-- `docs/INVENTORY.md`: the hardware this was designed against, and the
-  board identification notes for the ESP32-S3 used in the workaround
-- `docs/board-1-esp32-s3.jpg`: the reference board (ESP32-S3-WROOM-1,
-  N16R8), photo metadata stripped
-- `SECURITY.md`: pairing state handling, token handling, and scope notes
-- `SANITIZATION-LOG.md`: how this public copy was produced from internal
-  working notes, by class of change only
-- `LICENSE`: MIT
+| Path | What it is |
+|---|---|
+| `musebridge/` | The application: UI, core worker, tools, pairing, transports |
+| `tests/` | The test suite (500+ tests) |
+| `tools/` | Probe and evaluation harnesses used during development |
+| `tools/eval/` | The controlled evaluation suite (synthetic tasks and checker) |
+| `firmware/serial-ble/` | The ESP32-S3 serial-BLE provisioning firmware |
+| `docs/` | Design contracts, UI design, the agent skill for this PC |
+| `evidence/` | Dated acceptance and measurement receipts |
+| `vendor/PINNED.md` | The pinned upstream SDK revision (see below) |
 
-## Current state, plainly
+## Setup
 
-This repository is a design and build guide, not a finished software
-release. The research, the hardware identification, the transport design,
-and the build steps are complete and checked against the upstream SDK
-source. The serial transport itself is original work to build, sized in
-the guide at roughly 120 to 180 lines of Python on the host side and 400
-to 700 lines of C on the board side. Nothing in this repository claims
-that build is done. If you build it, the verification gate and the
-negative tests in the workaround guide are the bar to call it working.
+Prerequisites: Windows 11, Python 3.13+, [uv](https://docs.astral.sh/uv/),
+and the upstream SDK checked out at the pinned revision:
 
-## Quick start: which route is yours
+```powershell
+git clone https://github.com/facebookincubator/muse-gadget-sdk vendor/muse-gadget-sdk
+git -C vendor/muse-gadget-sdk checkout 9d8cca156cdec9ea06efcf854b03dccc5ca76d42
+uv sync
+```
 
-- Your PC has working Bluetooth and runs Linux or WSL2: install the
-  upstream Linux gadget client and pair normally. You do not need the
-  workaround.
-- Your PC has no Bluetooth, and you have a supported ESP32 board: use
-  [docs/ESP32-BLE-FRONTEND.md](docs/ESP32-BLE-FRONTEND.md).
-- Your PC has no Bluetooth and no board: a USB Bluetooth dongle passed
-  into WSL2 (avenue 1 in the game plan) is the most trodden path.
-- You cannot pair at all: avenue 4 gives you a working executor over SSH
-  and UI automation today, at relay latency.
+The SDK checkout is intentionally not vendored into this repository (it is a
+large separate project with its own license, and one file in it is a signing
+key). See [vendor/PINNED.md](vendor/PINNED.md).
 
-## Upstream
+For the ESP32 provisioning hardware, see
+[`firmware/serial-ble/README.md`](firmware/serial-ble/README.md) for build and
+flashing instructions, and the guide in
+[docs/ESP32-BLE-FRONTEND.md](docs/ESP32-BLE-FRONTEND.md) for the pairing
+session walkthrough.
 
-The Muse Gadget SDK is Meta's open framework, at
-github.com/facebookincubator/muse-gadget-sdk, under the Apache License
-2.0. This repository contains none of its code. It documents how to put
-its Linux client to work on a Windows PC it was not packaged for, using
-the transport seam its own pairing code provides. ESP-IDF, NimBLE, WSL2,
-and usbipd-win are other projects' work, credited in the guide where they
-appear.
+Launch for development:
 
-This is an unofficial, independent project. It is not affiliated with or
-endorsed by Meta.
+```powershell
+pythonw -m musebridge.app --secondary-screen --connect
+```
 
-## License
+or install the current-user shortcuts with `Install-MuseBridge-Shortcuts.ps1`
+and start with `Start-MuseBridge.ps1 -Connect`.
 
-MIT. See `LICENSE`. The copyright holder's name appears in the license,
-as intended, and nowhere else in this repository.
+## Provenance and license
+
+Original work in this repository is released under the MIT License (see
+[LICENSE](LICENSE)). The Muse Gadget SDK is upstream work of its authors,
+Apache License 2.0, and is **not** included here; MuseBridge depends on it as
+a pinned external checkout. PlatformIO library dependencies of the firmware
+(NimBLE-Arduino, ArduinoJson) are upstream projects under their own licenses,
+fetched at build time.
+
+This is an unofficial community project built on the public SDK. It is not
+affiliated with or endorsed by Meta.
+
+## Sanitization
+
+This repository is a sanitized public copy of a private working tree. The
+owner's name appears only in the LICENSE copyright line; personal identifiers,
+account and device identifiers, local network details and private run data
+were replaced with generic terms or removed, and the upstream SDK checkout
+(which contains a signing key) was left out entirely. The classes of change
+are recorded in [SANITIZATION-LOG.md](SANITIZATION-LOG.md).
+
+An earlier revision of this repository published only the design documents,
+before the source tree was prepared. The ESP32 guide in particular has been
+rewritten from the shipped implementation; where the design and the build
+differ, the build described here is what actually happened.

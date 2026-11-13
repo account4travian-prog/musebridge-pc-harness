@@ -1,0 +1,1 @@
+Add an optional --shout flag to cli.py. With that flag it must print exactly HELLO; without it, keep printing hello. Document the flag in README.md. Run the script with and without the flag.

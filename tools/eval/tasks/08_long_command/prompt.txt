@@ -1,0 +1,1 @@
+Run long_check.py to completion. It intentionally takes 70 seconds. Write only its final SUMMARY line to answer.txt, then report that exact line. Do not shorten or edit the script.

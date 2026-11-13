@@ -1,0 +1,51 @@
+# MB-30 P-5 header-memory probe
+
+Sanitized actual-reply and tool-count measurements.
+
+```json
+{
+  "probe": "P-5",
+  "status": "finished",
+  "baseline": {
+    "label": "v2-core",
+    "task_count": 12,
+    "all_passed": true
+  },
+  "modes": [
+    {
+      "repeat_every": 0,
+      "finished": true,
+      "final_contains_private_fact": true,
+      "final_no_tool_calls": true,
+      "final_tool_calls": 0,
+      "filler_tool_calls": 0,
+      "total_tool_calls": 0,
+      "header": {
+        "send_count": 14,
+        "header_present_turns": [
+          1
+        ],
+        "preamble_bytes": [
+          527,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  ],
+  "replayed_uncertain_request": false,
+  "error_code": null,
+  "finished_at": "2026-11-13T09:40:13.269122+00:00"
+}
+```
