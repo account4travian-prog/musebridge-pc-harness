@@ -1,0 +1,26 @@
+# Pairing state is a credential. Never commit it.
+identity.json
+pairing.json
+*.pairing.json
+/var/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.keystore
+*credentials*
+*secret*
+*token*
+
+# Runtime and build output
+__pycache__/
+node_modules/
+*.log
+.local/
+dist/
+build/
+*.zip
