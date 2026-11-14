@@ -106,6 +106,30 @@ pythonw -m musebridge.app --secondary-screen --connect
 or install the current-user shortcuts with `Install-MuseBridge-Shortcuts.ps1`
 and start with `Start-MuseBridge.ps1 -Connect`.
 
+## Linux support (Phase 1)
+
+The harness also runs on Linux, with every Windows path kept intact. On
+Linux it uses bash as the default shell, a POSIX job manager, secrets in the
+system keyring with a 0600 file fallback, and pairing over the PC's own
+Bluetooth through the SDK's native `BleServer`. The ESP32 serial bridge stays
+as the fallback for machines without Bluetooth.
+
+Setup on Ubuntu (the venv must be built on the system Python with
+`--system-site-packages`, so the SDK sees the system `python3-dbus` and
+`python3-gi` packages):
+
+```bash
+git clone https://github.com/facebookincubator/muse-gadget-sdk vendor/muse-gadget-sdk
+git -C vendor/muse-gadget-sdk checkout 9d8cca156cdec9ea06efcf854b03dccc5ca76d42
+uv sync --python /usr/bin/python3
+```
+
+What works: pairing from the Muse app, the chat window, shell and file tools,
+git tools, and MCP stdio servers. What does not work yet: interactive
+terminals (the terminal host still needs ConPTY), desktop automation, and the
+Windows-only tests have no Linux equivalents yet. Tested on one machine only
+(Ubuntu, Wayland + GNOME), so wider compatibility is unproven.
+
 ## Provenance and license
 
 Original work in this repository is released under the MIT License (see

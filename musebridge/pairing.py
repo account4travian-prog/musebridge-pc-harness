@@ -1,4 +1,12 @@
-"""Muse v5 pairing, using upstream crypto and a serial BLE transport."""
+"""Muse v5 pairing, using upstream crypto.
+
+Transport: on Linux the SDK's native BlueZ BLE peripheral
+(``musegadget.ble_server.BleServer``) serves setup directly from the system
+Bluetooth adapter. On Windows, or on Linux without Bluetooth, the ESP32
+serial BLE bridge (``SerialTransport``) is the fallback. Pairing
+cryptography is untouched; only the transport is selected here.
+"""
+import sys
 import threading
 import time
 from musegadget import __version__, identity, muse_api, config
@@ -12,7 +20,33 @@ class OnlineNetwork:
         return True  # The credentials check below verifies actual Muse reachability.
 
     def current_connection_entry(self):
-        return {'ssid': 'Windows PC current connection', 'rssi': -30, 'secure': False}
+        label = ('Linux PC current connection' if sys.platform != 'win32'
+                 else 'Windows PC current connection')
+        return {'ssid': label, 'rssi': -30, 'secure': False}
+
+
+def _linux_transport_factory(port, name, on_write, on_disconnect):
+    """Build the SDK's native Linux BLE peripheral.
+
+    ``port`` is the ESP32 serial port; unused on Linux, where the system
+    Bluetooth adapter serves the GATT peripheral directly. Needs BlueZ plus
+    python3-dbus and python3-gi (system packages with no wheels); the venv
+    must use --system-site-packages to see them.
+    """
+    from musegadget.ble_server import BleServer
+    return BleServer(name, on_write, on_disconnect)
+
+
+def _default_transport_factory():
+    """Native Linux BLE when the machine has Bluetooth, else the ESP32 bridge."""
+    if sys.platform != "win32":
+        try:
+            from .linux_support import has_bluetooth
+        except Exception:
+            has_bluetooth = None
+        if has_bluetooth is not None and has_bluetooth():
+            return _linux_transport_factory
+    return SerialTransport
 
 
 def get_identity(store):
@@ -23,7 +57,9 @@ def get_identity(store):
     return identity.Identity(saved['mac'])
 
 
-def pair(store, port, sdk_token, status, stop, transport_factory=SerialTransport):
+def pair(store, port, sdk_token, status, stop, transport_factory=None):
+    if transport_factory is None:
+        transport_factory = _default_transport_factory()
     if not sdk_token.startswith('mgst_') or any(c.isspace() for c in sdk_token):
         raise ValueError('Enter the SDK token from gadgets.muse.ai')
     ident = get_identity(store)

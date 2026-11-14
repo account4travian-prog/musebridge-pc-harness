@@ -1,6 +1,8 @@
-"""Windows contract consumed by Muse's existing VM workflows."""
+"""Platform contract consumed by Muse's existing VM workflows."""
+import os
 import platform
 from .execution import effect_of,requires_project
+from .shells import default_shell
 
 
 CONTRACT_VERSION=2
@@ -28,16 +30,18 @@ def manifest(router,cid):
         if name in ('vision.observe','screen.look') and not router.vision.status(cid)['enabled']:enabled=False
         tools[name]={'effect':effect,'enabled':enabled,'required':schema['required'],'optional':schema['optional'],
                      'description':schema['description']}
-    return {'contract_version':CONTRACT_VERSION,'runtime':'Windows native','platform':platform.platform(),
+    _is_windows = os.name == 'nt'
+    _shell = default_shell()
+    return {'contract_version':CONTRACT_VERSION,'runtime':'Windows native' if _is_windows else 'Linux native','platform':platform.platform(),
         'conversation_id':cid,'project':{'id':project['id'],'name':project['name'],'root':project['root']} if project else None,
         'scope':policy,'active_run_id':router.execution.active_run(cid),'sandbox':False,
-        'paths':{'syntax':'Windows','tool_paths':'Relative to this project root; VM paths do not identify PC files',
-                 'path_separator':'\\'},
-        'execution':{'shell':'powershell','available_shells':describe_shells(),
+        'paths':{'syntax':'Windows' if _is_windows else 'POSIX','tool_paths':'Relative to this project root; VM paths do not identify PC files',
+                 'path_separator':'\\' if _is_windows else '/'},
+        'execution':{'shell':_shell,'available_shells':describe_shells(),
                      'instructions':'Use shell.run for commands; select powershell, bash or cmd explicitly when needed. Use shell.job for returned running jobs and inspect exit_code.',
                      'inline_wait_cap_seconds':25,
                      'max_shell_job_wait_seconds':25,
-                     'encoding_note':'PowerShell and UTF-8 child output preserve Unicode. cmd built-ins may replace non-ASCII characters; prefer PowerShell for Unicode text.',
+                     'encoding_note':'PowerShell and UTF-8 child output preserve Unicode. cmd built-ins may replace non-ASCII characters; prefer PowerShell for Unicode text.' if _is_windows else 'Child output is UTF-8.',
                      'max_parallel_jobs':4,'max_job_seconds':3600,'max_job_wait_seconds':20,
                      'default_file_read_lines':400,'max_file_edit_bytes':4*1024*1024,
                      'file_editing':'Read numbered lines first; this chat remembers the file version. Use old/new or start_line/end_line, and read again if the file changed.',
@@ -45,7 +49,7 @@ def manifest(router,cid):
                      'binding':'Omit run_id, scope_revision and request_id. Conversation is inferred only when one chat has an active run; otherwise pass conversation_id.',
                      'remote_admission':'Remote mutations require an active local request; stopped or finished requests cannot create a new run by retrying tools.'},
         'workflow':{'owner':'Muse VM','local_skill_runtime':False,
-                    'instructions':'Use your existing skills/workflows. Adapt Windows execution through these tools; keep procedure reasoning on the VM.',
+                    'instructions':'Use your existing skills/workflows. Adapt local execution through these tools; keep procedure reasoning on the VM.',
                     'project_guidance':'bridge.context exposes project instructions, AGENTS.md, goal and plan'},
         'results':{'accepted':'Operation admitted; inspect later outcome',
                    'succeeded':'Local tool returned successfully; goal verification is separate',
