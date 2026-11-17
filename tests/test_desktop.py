@@ -237,6 +237,16 @@ def test_printwindow_capture_failure_never_saves_an_artifact(guarded_desktop, mo
     assert not list(tool.artifact_dir.rglob("*.jpg"))
 
 
+def test_window_move_during_capture_refuses_misaligned_image(guarded_desktop,monkeypatch):
+    tool,root,edit,button,state=guarded_desktop
+    rectangles=iter(({'left':1,'top':2,'right':101,'bottom':52},
+                     {'left':10,'top':2,'right':110,'bottom':52}))
+    monkeypatch.setattr(tool,'_window_rect',lambda *_:next(rectangles))
+    with pytest.raises(ValueError,match='moved or resized'):
+        tool.call('desktop.screenshot',{'conversation_id':'c','window_handle':100})
+    assert not list(tool.artifact_dir.rglob('*.jpg'))
+
+
 def test_printwindow_worker_timeout_is_bounded_and_saves_no_artifact(guarded_desktop, monkeypatch):
     tool, _root, _edit, _button, _state = guarded_desktop
     monkeypatch.setattr(desktop, "_capture_window_printwindow", tool._original_capture_helper)

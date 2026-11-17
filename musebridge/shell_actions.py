@@ -65,9 +65,6 @@ class ShellActions:
     def refresh_navigation(self):
         self.navigation.blockSignals(True);self.navigation.clear();self.nav_items={}
         conversations=self.worker.catalog.conversations()
-        main=next(c for c in conversations if c['id']=='main')
-        item=QTreeWidgetItem([main['title']]);item.setIcon(0,icon('chat'))
-        item.setData(0,Qt.ItemDataRole.UserRole,'main');self.navigation.addTopLevelItem(item);self.nav_items['main']=item
         projects=self.worker.catalog.projects()
         groups={p['id']:p['name'] for p in projects}
         groups[None]='Conversations'
@@ -173,7 +170,9 @@ class ShellActions:
         if self.current_id=='main':return
         if not self.save_draft() or (self.plan_dirty and not self.save_plan(quiet=True)):return
         self.worker.catalog.archive_conversation(self.current_id)
-        self.refresh_conversations('main');self.switch_conversation()
+        self.worker.queue.hold(self.current_id)
+        self.worker.router.vision.hold(self.current_id)
+        self.refresh_conversations(self.side_conversation());self.switch_conversation()
         self.handle_activity('Conversation archived locally. Restore it from View → Archived conversations.')
 
     def restore_conversation(self):
@@ -337,6 +336,10 @@ class ShellActions:
 
     def refresh_activity(self):
         if not hasattr(self,'pages'):return
+        active={row['conversation_id'] for row in self.worker.catalog.rows("SELECT conversation_id FROM runs WHERE state IN ('sending','acknowledged')")}
+        for cid,item in getattr(self,'nav_items',{}).items():
+            title=self.worker.catalog.conversation(cid)['title']
+            item.setText(0,title+(' - Working' if cid in active else ''))
         from .overview_ui import refresh_attention
         refresh_attention(self)
         if self.tabs.currentIndex()==0:return

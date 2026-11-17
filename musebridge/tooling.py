@@ -172,6 +172,8 @@ class ToolRouter:
         self.workspaces = {}
         self.failure_streaks = OrderedDict()
         self.progress_streaks = OrderedDict()
+        self.parallel_enabled=False
+        self.write_owners={}
         self.connection_specs = None
         from .pack_tools import PackTools
         self.packs = PackTools(self)
@@ -189,6 +191,7 @@ class ToolRouter:
         self.shadow = ShadowGit(self,directory)
         self.execution.on_run_started=self.shadow.begin
         self.execution.on_run_finished=self.shadow.finish
+        self.hooks.claim_writer=self.claim_hook_write
 
     def specs(self):
         from .tool_surface import V2_SPECS
@@ -237,6 +240,20 @@ class ToolRouter:
             raise BindingError('conversation_changed', 'Conversation changed; request does not match the active chat.',
                 'Refresh bridge.context in the selected chat before calling this tool.')
         conversation = self.catalog.conversation(cid)
+        if remote and self.parallel_enabled:
+            active=self.catalog.rows("SELECT id,conversation_id FROM runs WHERE state IN ('sending','acknowledged')")
+            if name!='bridge.context' and len({row['conversation_id'] for row in active})>1:
+                run_id=params.get('run_id')
+                if not isinstance(run_id,str) or not run_id:
+                    raise BindingError('ambiguous_conversation','Several requests are active; this call has no run binding.',
+                        'Pass both conversation_id and run_id from the Work binding line in this request.')
+                try:bound=self.execution.run(cid,run_id)
+                except ValueError:
+                    raise BindingError('conversation_changed','The conversation/run pair does not match.',
+                        'Use both IDs from the Work binding line in this request.') from None
+                if bound['state'] not in ('sending','acknowledged'):
+                    raise BindingError('stale_scope','This request binding is no longer active.',
+                        'Use the conversation_id/run_id pair in the current request.')
         if requires_project(name) and not conversation['project_id']:
             raise BindingError('no_project','This conversation has no PC workspace.',
                 'Choose a workspace using the folder control in MuseBridge. Keep this chat; attach an existing workspace or choose a folder, then send a new request.')
@@ -368,8 +385,10 @@ class ToolRouter:
                 if admission_generation is not None and admission_generation!=self.execution.generation:raise ValueError('Queued local action revoked by Stop Work')
                 record=self.execution.start_call(cid,name,effect,run_id)
                 call_id,run_id,own=record
+                fresh_lease=self.claim_project_write(cid,run_id) if effect=='project_write' else False
                 if own and effect=='project_write' and name not in ('change.restore',):
                     self.shadow.begin(cid,run_id)
+                if fresh_lease and not (own and name=='change.restore'):self.shadow.rebase(cid,run_id)
                 # Status, discovery and cancellation remain available even if a
                 # configured hook is broken. Hook jobs never recurse via Router.
                 hooked=not name.startswith(('bridge.','run.','hook.','job.status','job.wait','job.cancel')) and effect!='cleanup'
@@ -641,6 +660,39 @@ class ToolRouter:
         self.jobs.set_paused(True)
         self.jobs.stop_all()
         self.mcp.stop_all()
+
+    def claim_project_write(self,cid,run_id):
+        """Keep overlapping canonical workspace roots owned by one live writer chat."""
+        import os
+        from pathlib import Path
+        project=self.catalog.context(cid).get('project')
+        if not project:return
+        root=os.path.normcase(str(Path(project['root']).resolve(strict=True))).rstrip('\\/')
+        with self.execution.lock:
+            fresh=self.write_owners.get(root)!=(cid,run_id)
+            for key,(owner,owner_run) in list(self.write_owners.items()):
+                if owner==cid:continue
+                if not (root==key or root.startswith(key+os.sep) or key.startswith(root+os.sep)):continue
+                row=self.execution.run(owner,owner_run)
+                calls=self.catalog.rows("SELECT id FROM tool_calls WHERE conversation_id=? AND effect='project_write' "
+                    "AND state IN ('accepted','running') LIMIT 1",(owner,))
+                if row['state'] in ('sending','acknowledged','local') or calls or self.shell._list(owner)['jobs']:
+                    raise BindingError('project_busy','Another conversation owns writes in this workspace.',
+                        'Wait for that request to finish, or use git.worktree.create for a separate checkout.')
+                self.write_owners.pop(key,None)
+            self.write_owners[root]=(cid,run_id)
+            return fresh
+
+    def claim_hook_write(self,cid,run_id,source_id):
+        """Configured hook commands share the same root lease as ordinary project tools."""
+        run_id=run_id or self.execution.active_run(cid)
+        if not run_id:
+            try:self.execution.run(cid,source_id);run_id=source_id
+            except ValueError:
+                rows=self.catalog.rows("SELECT run_id FROM tool_calls WHERE conversation_id=? "
+                    "ORDER BY created DESC LIMIT 1",(cid,))
+                run_id=rows[0]['run_id'] if rows else None
+        if run_id and self.claim_project_write(cid,run_id):self.shadow.rebase(cid,run_id)
 
     def run_ended_hooks(self,cid,run_id):
         try:self.hooks.run_event(cid,'run_ended',run_id)

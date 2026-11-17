@@ -1,0 +1,15 @@
+# Parallel chat acceptance - November 14, 2026
+
+Authority: `HARNESS-UPGRADE-PLAN.md`, MB-36a. Runtime commit **0de011c** on `codex/parallel-chats` off foundation **92ea905** passed **599 tests, 5 skipped** in 419.95 seconds. Merge also requires the final evaluation/acceptance; [closeout ledger](HARNESS-1.0.md) records that decision.
+
+`LiveChats` multiplexes Main and at most three dedicated chat subscriptions on one existing LinkSession. Each has its own ready event, transcript and completion tracker; the SDK's shared compatibility Event is not used to decide another chat's readiness. View selection does not cancel background work. Settled background subscriptions retire after 60 seconds; slot creation/reaping share one admission lock. Lost streams hold only their affected automation; acknowledgement followed by local tracking loss remains acknowledged and uncertain, never replayed.
+
+The SDK command callback has no trusted caller chat/request. Each connected request therefore supplies a short ephemeral conversation/run binding. Multiple-active calls require that matching pair, except context discovery and connection health. This catches mismatched bookkeeping, not forged pairs or authenticated tenant identity. Single-active inference remains supported. Voice reads context to obtain its new run rather than reusing a typed binding. [Decision and trust limits](../docs/PARALLEL-CHAT-ISOLATION.md).
+
+Canonical-root writer ownership includes aliases, nested roots, configured hooks and still-running effects. A different writer receives `project_busy`; reads continue. The first admitted write rebases its private snapshot, so a later chat's restore preserves a prior writer's completed bytes. Stop revokes all chats. Archive holds future queued/visual sends and is rechecked after asynchronous context preparation; restore requires explicit resume.
+
+Disposable tests exercise two concurrent file effects while switching the view, wrong/omitted pairs, transcript message-ID collisions, one stream's EOF while another remains ready, the three-project cap, same-root alias ownership, restore after successive writers, voice context refresh, retired bindings, hooks around reads, pre-ack EOF and archive during header preparation. Full-suite counts are in the closeout ledger.
+
+The [real two-chat probe](MB-36a-live-parallel.json) passed on one saved identity/session. Chat A's twenty-second shell task overlapped Chat B's shell tool interval while Main was selected. Both reached `remote_finished`, produced their expected files, and did not produce the other chat's file. The probe used disposable projects, archived its own chats and cleaned its own fixtures. This proves actual overlapping local tool intervals, not merely simultaneous UI labels.
+
+Main still receives parentless shared upstream replies/status; it cannot safely certify individual request completion or drive automatic continuation. Voice and real owner desktop/day-use acceptance remain separately open. No second reasoning agent, gadget identity or pairing was introduced.

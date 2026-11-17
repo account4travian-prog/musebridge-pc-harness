@@ -1,0 +1,5 @@
+{
+  "since": "2026-11-13T03:59:05-06:00",
+  "legacy_calls": [],
+  "decision": "Retain compatibility on 0.8 candidate pending skill-v2 and release acceptance; local UI inspection still uses legacy routes."
+}

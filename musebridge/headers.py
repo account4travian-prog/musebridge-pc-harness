@@ -38,7 +38,7 @@ class HeaderManager:
         self.states[cid] = {'stamp':stamp,'since_header':since}
 
 
-def format_header(cid,project,policy,shells,summary,tools,skill_version):
+def format_header(cid,project,policy,shells,summary,tools,skill_version,max_bytes=780):
     if project:
         location = f'Project "{_clip(project["name"],75)}" at {_clip(project["root"],150)}'
         git = _clip(summary.get('branch') or summary.get('status_summary') or 'unavailable',55)
@@ -61,7 +61,7 @@ def format_header(cid,project,policy,shells,summary,tools,skill_version):
     text = '\n'.join(lines)
     # Each field is separately bounded, so headers stay short without deleting
     # the workflow instruction or returning an apparently complete long path.
-    if len(text.encode('utf-8')) > 780:
+    if len(text.encode('utf-8')) > max_bytes:
         lines[0] = '[MuseBridge] Windows PC. '+('Project "'+_clip(project['name'],55)+'"; full path in bridge.context.' if project else location)
         text = '\n'.join(lines)
     return text

@@ -58,6 +58,10 @@ class Core:
         self.stop = asyncio.Event()
         self.session = None
         self.transcript = Transcript()
+        self.transcripts={conversation_id:self.transcript}
+        from .live_chats import LiveChats
+        self.live_chats=LiveChats(self)
+        self.parallel_enabled=False
         self.send_lock = asyncio.Lock()
         self.vm_id = None
         self.catalog, self.router = catalog, router
@@ -76,7 +80,7 @@ class Core:
     def tool(self, name, params, timeout_ms=None):
         if self.router:
             from .transport_errors import sdk_result
-            return self.router.call(name,params,timeout_ms,expected_conversation_id=self.conversation_id,remote=True,
+            return self.router.call(name,params,timeout_ms,expected_conversation_id=None if self.parallel_enabled else self.conversation_id,remote=True,
                                     response_adapter=sdk_result)
         self.activity('Muse called ' + name)
         if name == 'bridge.health':
@@ -102,41 +106,37 @@ class Core:
         else:
             self.message(*update)
 
-    def remote_id(self):
-        return self.catalog.conversation(self.conversation_id)['remote_id'] if self.catalog else None
+    def remote_id(self,cid=None):
+        return self.catalog.conversation(cid or self.conversation_id)['remote_id'] if self.catalog else None
 
     async def select_conversation(self, identifier):
-        async with self.send_lock:
-            if self.catalog:
-                self.catalog.conversation(identifier)
-            if self.run_tracker and identifier!=self.conversation_id:
-                self.run_tracker.stop(self.conversation_id,'interrupted')
-            self.conversation_id = identifier
-            self.transcript = Transcript()
-            if self.session and self.session.registered.is_set():
-                await self.prepare_chat(self.session)
+        if self.catalog:self.catalog.conversation(identifier)
+        self.conversation_id=identifier
+        self.transcript=self.transcripts.setdefault(identifier,Transcript())
+        if self.session and self.session.registered.is_set():
+            from .live_chats import ConversationLimit
+            try:await self.prepare_chat(self.session)
+            except ConversationLimit:
+                self.status('Viewing saved chat; three project chats are currently working')
 
     async def prepare_chat(self, session):
-        if self._chat_task:
-            self._chat_task.cancel()
-            await asyncio.gather(self._chat_task,return_exceptions=True)
-        self._opened = asyncio.Event()
-        remote = self.remote_id()
-        self._remote_exists = True
-        if remote:
-            self._remote_exists = (await session.open_side_chat(remote)).exists
-        if self._remote_exists:
-            self._chat_task = asyncio.create_task(self.watch_chat(session,self.conversation_id,remote,self._opened))
-            def chat_ended(task):
-                if not task.cancelled() and self._session_stop and not self.stop.is_set():
-                    task.exception()  # Observe failure without exposing private server content.
-                    self._session_stop.set()
-            self._chat_task.add_done_callback(chat_ended)
-            await asyncio.wait_for(self._opened.wait(),20)
-            self.status('Connected — '+(self.catalog.conversation(self.conversation_id)['title'] if self.catalog else 'main Muse chat'))
-        else:
-            self._chat_task = None
-            self.status('New conversation ready — send its first message to create it in Muse')
+        self.parallel_enabled=True
+        if self.router:self.router.parallel_enabled=True
+        await self.live_chats.ensure('main')
+        state=await self.live_chats.ensure(self.conversation_id)
+        self._opened=state.opened
+        self._remote_exists=state.exists
+        self._chat_task=state.task
+        self.transcript=self.transcripts.setdefault(self.conversation_id,Transcript())
+        self.status('Connected - '+self.catalog.conversation(self.conversation_id)['title'] if state.exists else 'New conversation ready')
+
+    def chat_ready(self,cid):
+        """Per-chat readiness; the SDK's shared subscription Event cannot represent this."""
+        return self.live_chats.ready(cid) if self.parallel_enabled else bool(self.session and (not self._remote_exists or self.session.chat_subscribed.is_set()))
+
+    def live_conversations(self):
+        """Return subscribed/reserved chats without consulting the selected UI view."""
+        return tuple(self.live_chats.states) if self.parallel_enabled else (self.conversation_id,)
 
     async def refresh(self, pairing, force=False):
         if not force and pairing.get('access_token_saved_at', 0) > time.time() - 3 * 3600:
@@ -156,14 +156,16 @@ class Core:
 
     async def watch_chat(self, session, cid=None, remote=None, opened=None):
         cid = cid or self.conversation_id
-        self.transcript.sequence.clear()
-        transcript = self.transcript
+        transcript=self.transcripts.setdefault(cid,Transcript())
+        transcript.sequence.clear()
         stream = session.subscribe_chat(remote,opened=opened) if opened else session.subscribe_chat()
         async for event in stream:
             payload = event.get('payload',{})
             event_chat = payload.get('session_id') or event.get('session_id')
             if remote and event_chat and event_chat != remote:
                 continue
+            if remote is None and event_chat and self.catalog:
+                if any(item['remote_id']==event_chat for item in self.catalog.conversations(True) if item['remote_id']):continue
             if self.event_observer:
                 self.event_observer(cid,event)
             if self.run_tracker:self.run_tracker.feed(cid,event)
@@ -179,12 +181,20 @@ class Core:
             raise ValueError('Message is empty or too large')
         requested_cid=conversation_id or self.conversation_id
         async with self.send_lock:
-            if requested_cid!=self.conversation_id:
-                raise ConnectionError('Conversation changed before send; draft was not sent')
             session = self.session
-            if session is None or (self._remote_exists and not session.chat_subscribed.is_set()):
+            if session is None:raise ConnectionError('Connect and wait for chat to be ready')
+            if hasattr(session,'subscribe_chat') and hasattr(session,'open_side_chat'):
+                self.parallel_enabled=True
+                if self.router:self.router.parallel_enabled=True
+                state=await self.live_chats.ensure(requested_cid)
+                remote_exists=state.exists
+                ready=self.live_chats.ready(requested_cid)
+            else:
+                remote_exists=self._remote_exists
+                ready=session.chat_subscribed.is_set()
+            if remote_exists and not ready:
                 raise ConnectionError('Connect and wait for chat to be ready')
-            cid = self.conversation_id
+            cid = requested_cid
             if visual_feedback is not None:self.router.vision.validate_delivery(cid,visual_feedback)
             wire = text
             send_id = None
@@ -196,6 +206,7 @@ class Core:
                 from .headers import fingerprint, format_header
                 from .context_snapshot import SKILL_VERSION
                 conversation = self.catalog.conversation(cid)
+                if conversation['archived']:raise ValueError('Restore this archived conversation before sending')
                 project = self.catalog.project(conversation['project_id']) if conversation['project_id'] else None
                 policy = self.router.execution.policy(cid) if self.router else {'profile':'read_only','revision':1,'paused':False}
                 tools = (self.router.connection_specs or self.router.registration_specs()) if self.router else {'bridge.health':{}}
@@ -211,7 +222,8 @@ class Core:
                         shells = await asyncio.to_thread(describe_shells)
                     else:
                         summary, shells = {}, {}
-                    supplements.append(format_header(cid,project,policy,shells,summary,tools,SKILL_VERSION))
+                    supplements.append(format_header(cid,project,policy,shells,summary,tools,SKILL_VERSION,
+                        max_bytes=600 if self.parallel_enabled else 780))
                 if self.router:
                     seed = self.router.continuity.retrieve_seed(cid)
                     if seed:supplements.append('Handoff summary (context, not new permissions):\n'+seed['text'])
@@ -224,6 +236,8 @@ class Core:
                 if supplements:wire = '\n\n'.join(supplements)+'\n\nUser request:\n'+text
                 if len(wire.encode()) > 128*1024:
                     raise ValueError('Message plus project context is too large')
+                if self.catalog.conversation(cid)['archived']:
+                    raise ValueError('Conversation archived while preparing the request; it was not sent')
                 if send_guard:send_guard()
                 if finish_check:
                     if not self.router.finish_line.delivery_allowed(cid,continuation_of):
@@ -236,6 +250,9 @@ class Core:
                     if self.router:
                         source = visual_feedback['parent_run_id'] if visual_feedback is not None else continuation_of
                         self.router.finish_line.bind_run(cid,run_id,source,goal=goal_round)
+                    if self.parallel_enabled:
+                        binding=f'Work binding: conversation_id={cid}; run_id={run_id}. Pass both with every PC tool call.'
+                        wire=binding+'\n\n'+wire
                     if visual_feedback is not None:self.router.vision.bind_run(cid,visual_feedback,run_id)
                 self.catalog.event(cid, 'send.context', {
                     'send_id': send_id,
@@ -245,8 +262,8 @@ class Core:
                 })
             try:
                 if image is not None:
-                    response=await session.send_image(image.data,image.mime_type,self.remote_id(),message=wire,filename=image.filename)
-                else:response = await (session.send_chat(wire,session_id=self.remote_id()) if self.catalog else session.send_chat(text))
+                    response=await session.send_image(image.data,image.mime_type,self.remote_id(cid),message=wire,filename=image.filename)
+                else:response = await (session.send_chat(wire,session_id=self.remote_id(cid)) if self.catalog else session.send_chat(text))
                 ack = acknowledgement(response)
                 identifiers = list(_acknowledged_message_ids(ack))
             except (Exception,asyncio.CancelledError):
@@ -261,6 +278,8 @@ class Core:
             try:
                 if send_id:self.catalog.settle_send(send_id,'acknowledged')
                 if self.run_tracker:self.run_tracker.acknowledge(cid,run_id,ack)
+                if self.router and run_id and self.router.execution.run(cid,run_id)['state'] in ('unknown','interrupted'):
+                    tracking_ok=False
             except (Exception,asyncio.CancelledError):
                 tracking_ok=False
                 try:
@@ -273,9 +292,16 @@ class Core:
                     from .attachments import Attachments
                     Attachments(self.catalog).acknowledge(cid,identifiers,image,clear_draft=clear_image_draft)
                 for identifier in identifiers:
-                    self.transcript.remember(identifier)
+                    self.transcripts.setdefault(cid,Transcript()).remember(identifier)
                     self.deliver(cid,(identifier, 'You', text))
-                if not self._remote_exists:await self.prepare_chat(session)
+                if not remote_exists:
+                    if self.parallel_enabled:
+                        current=await self.live_chats.ensure(cid,refresh=True)
+                        if cid==self.conversation_id:
+                            self._remote_exists=current.exists
+                            self._opened=current.opened
+                            self._chat_task=current.task
+                    else:await self.prepare_chat(session)
             except (Exception,asyncio.CancelledError):
                 tracking_ok=False
             self.activity('Message acknowledged' if tracking_ok else 'Message acknowledged; local tracking needs inspection. Do not resend it.')
@@ -313,7 +339,7 @@ class Core:
                 if self.router:self.router.context_snapshot.reset_environment()
                 session = LinkSession(noise_host=pairing.get('noise_host') or 'hatch.metaaivm.com',
                     vm_id=self.vm_id, vm_auth_token=vm['vm_auth_token'],
-                    device=(DeviceDescription(ident.node_id,'MuseBridge Windows PC','0.7.0',self.router.begin_registration())
+                    device=(DeviceDescription(ident.node_id,'MuseBridge Windows PC','0.8.0',self.router.begin_registration())
                             if self.router else self.describe(ident)), run_command=self.tool,
                     invoke_slots=asyncio.Semaphore(12))
                 self.session = session
@@ -343,11 +369,14 @@ class Core:
                 # Never show exception text that might contain credentials/URLs.
                 self.status('Connection unavailable (' + type(exc).__name__ + '); retrying…')
             finally:
+                live_cids=self.live_conversations()
                 self.session = None
+                await self.live_chats.close()
                 if self.router:self.router.connection_specs = None
                 if self.run_tracker:self.run_tracker.stop_all()
                 if self.event_observer:
-                    self.event_observer(self.conversation_id,{'type':'disconnect'})
+                    for cid in set(live_cids)|{self.conversation_id}:
+                        self.event_observer(cid,{'type':'disconnect'})
                 if self._chat_task:
                     self._chat_task.cancel()
                     await asyncio.gather(self._chat_task,return_exceptions=True)

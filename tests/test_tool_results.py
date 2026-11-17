@@ -59,8 +59,8 @@ def test_failed_blocked_unknown_hooks_only_are_reported_with_recovery():
 def test_errors_normalize_to_actionable_catalog_codes_and_sanitize_secrets_paths():
     error = {
         "code": "ValueError",
-        "message": "changed since read at C:\\Users\\the owner\\AppData\\Local\\MuseBridge\\profile.db access_token=abc123 Bearer eyJhbGciOiJsecret",
-        "hint": "Read again at \\\\server\\share\\Users\\the owner\\private.txt password='super secret'",
+        "message": "changed since read at C:\\Users\\Example\\AppData\\Local\\MuseBridge\\profile.db access_token=<redacted>",
+        "hint": "Read again at \\\\server\\share\\Users\\Example\\private.txt password=<redacted>",
     }
     normalized = normalize_error(error, "file.edit")
     assert normalized["code"] == "changed_since_read"

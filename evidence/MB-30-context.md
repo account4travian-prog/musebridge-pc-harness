@@ -8,7 +8,7 @@ Implemented a four-line acknowledged header under 800 UTF-8 bytes, sent on first
 
 The VM skill and Application -> Teach Muse this PC dialog are implemented and locally tested. Sending the teaching request preserves composer/attachment drafts and does not record installation. The owner confirmation control records the installed version; P-5 refuses live execution before that confirmation. No second local skill runtime was added.
 
-The owner explicitly selected `C:\Users\the owner\Documents\MuseBridge\PC-Workspace`. Created that directory and attached it to the existing Main chat under the application identity lock with the normal app closed. Local and remote chat identities were preserved. The folder is ignored by this source repository. Same-chat workspace selection is now available through the composer folder control. Binding refuses active mutation calls or owned jobs, retires old requests and fences pending effects against scope changes.
+The owner explicitly selected `C:\Users\Example\Documents\MuseBridge\PC-Workspace`. Created that directory and attached it to the existing Main chat under the application identity lock with the normal app closed. Local and remote chat identities were preserved. The folder is ignored by this source repository. Same-chat workspace selection is now available through the composer folder control. Binding refuses active mutation calls or owned jobs, retires old requests and fences pending effects against scope changes.
 
 ## Live evidence
 

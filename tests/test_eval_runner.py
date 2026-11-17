@@ -14,6 +14,12 @@ import pytest
 from tools.eval import compare, run_eval
 
 
+def test_fixed_final_label_cannot_expand_into_a_report_path():
+    assert run_eval.validate_label('v1.0')=='v1.0'
+    for value in ('../v1.0','v1.0/other','..','v1.0\\other'):
+        with pytest.raises(ValueError):run_eval.validate_label(value)
+
+
 ROOT = Path(__file__).resolve().parents[1]
 
 

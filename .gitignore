@@ -7,11 +7,6 @@ firmware/serial-ble/.pio/
 !tools/eval/tasks/**/*.log
 .local/
 /PC-Workspace/
+/.codex-remote-attachments/
+/build/
 vendor/muse-gadget-sdk/
-
-# Public-copy additions: never commit identity or credential material
-identity.json
-pairing.json
-*.pem
-.env
-*.token

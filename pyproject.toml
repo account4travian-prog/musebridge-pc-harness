@@ -1,6 +1,6 @@
 [project]
 name = "musebridge"
-version = "0.7.0"
+version = "0.8.0"
 requires-python = ">=3.13"
 dependencies = [
     "musegadget",
@@ -40,7 +40,7 @@ build-backend = "setuptools.build_meta"
 include = ["musebridge*"]
 
 [tool.setuptools.package-data]
-musebridge = ["assets/*.ico"]
+musebridge = ["assets/*.ico", "assets/atlas/*.md", "assets/atlas/*.png", "assets/atlas/stills/*.webp", "assets/atlas/animations/*.mp4", "assets/atlas/animations-darkmode/*.mp4"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

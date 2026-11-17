@@ -129,7 +129,7 @@ class BrowserRefs:
             elif element is not None:element.wait_for_element_state('visible',timeout=10000)
             else:page.get_by_text(text,exact=False).first.wait_for(timeout=10000)
         elif action=='scroll':
-            value=params.get('value',500)
+            value=params.get('amount',params.get('value',500))
             if type(value) not in (int,float) or not math.isfinite(value) or abs(value)>10000:raise ValueError('scroll value must be -10000..10000')
             if element is None:page.mouse.wheel(0,value)
             else:element.evaluate('(n,v)=>n.scrollBy(0,v)',value)

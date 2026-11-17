@@ -1,0 +1,24 @@
+{
+  "observed_at_utc": "2026-11-17T00:13:59.386019+00:00",
+  "marker": "44b39f66",
+  "workspace_exists": true,
+  "prepared_input_empty": true,
+  "desktop_control_enabled": true,
+  "voice_target_is_test_chat": true,
+  "draft_staged": true,
+  "desktop_result_absent": true,
+  "voice_result_absent": true,
+  "owner_checks_ready_observed_in_ui": true,
+  "one_harness_ui_process": true,
+  "all_test_windows_on_secondary": true,
+  "all_test_windows_within_work_area": true,
+  "visible_test_windows": [
+    "atlas",
+    "checks",
+    "harness",
+    "notepad"
+  ],
+  "agent_sent_live_prompt": false,
+  "agent_started_microphone": false,
+  "owner_verdict_recorded": false
+}

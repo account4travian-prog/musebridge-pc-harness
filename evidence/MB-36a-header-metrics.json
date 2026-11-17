@@ -1,0 +1,16 @@
+{
+  "reports": [
+    {
+      "label": "v2-eyes",
+      "first_preamble_samples": 12,
+      "min_first_preamble": 674,
+      "max_first_preamble": 683
+    },
+    {
+      "label": "v1.0",
+      "first_preamble_samples": 12,
+      "min_first_preamble": 671,
+      "max_first_preamble": 680
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "both_requests_active": true,
+  "run_states": [
+    "remote_finished",
+    "remote_finished"
+  ],
+  "one_session": true,
+  "main_view_did_not_interrupt": true,
+  "effects_correct": true,
+  "no_cross_files": true,
+  "overlapping_tool_intervals": true
+}

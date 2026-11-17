@@ -118,3 +118,39 @@ def test_twenty_thousand_file_warm_snapshot_under_five_seconds(harness):
     elapsed=time.monotonic()-started
     assert first==second
     assert elapsed<5,f'Warm snapshot took {elapsed:.3f}s'
+
+
+def test_interrupted_restore_preserves_evidence_and_manual_retry_is_idempotent(harness,monkeypatch):
+    root,_,router,cid,_=harness
+    for name in ('a','b'):(root/name).write_bytes(b'original')
+    run=begin(router,cid)
+    for name in ('a','b'):(root/name).write_bytes(b'changed')
+    finish(router,cid,run)
+    original=os.replace
+    calls=[]
+    def fail_second(source,target):
+        calls.append(target)
+        if len(calls)==2:raise OSError('Injected fixture I/O interruption')
+        return original(source,target)
+    monkeypatch.setattr(os,'replace',fail_second)
+    result=router.call('change.restore',{'conversation_id':cid,'run':run})
+    assert not result['ok']
+    assert sorted((root/name).read_bytes() for name in ('a','b'))==[b'changed',b'original']
+    monkeypatch.setattr(os,'replace',original)
+    assert router.call('change.restore',{'conversation_id':cid,'run':run})['ok']
+    assert all((root/name).read_bytes()==b'original' for name in ('a','b'))
+
+
+def test_junctions_cannot_enter_snapshot_or_restore_scope(harness,tmp_path):
+    root,_,router,cid,_=harness
+    outside=tmp_path/'disposable-neighbor'
+    outside.mkdir()
+    (outside/'private.txt').write_bytes(b'fixture neighbor')
+    junction=root/'jump'
+    subprocess.run(['cmd','/c','mklink','/J',str(junction),str(outside)],check=True,capture_output=True,
+                   creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+    run=begin(router,cid)
+    finish(router,cid,run)
+    assert not router.shadow.review(cid,run)['edits']
+    with pytest.raises(ValueError):router.shadow._target(root,'jump/private.txt')
+    assert (outside/'private.txt').read_bytes()==b'fixture neighbor'

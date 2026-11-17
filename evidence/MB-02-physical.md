@@ -1,6 +1,6 @@
 # MB-02 physical board session — 2026-11-11
 
-the owner connected the board and authorized the previously prepared flash/setup.
+The owner connected the board and authorized the previously prepared flash/setup.
 
 ## Hardware and backup
 
@@ -22,10 +22,10 @@ the owner connected the board and authorized the previously prepared flash/setup
 
 ## Current handoff
 
-MuseBridge was launched using `Start-MuseBridge.ps1`. the owner needs to select Pair PC, choose COM3, enter the SDK token in the masked field, and add MuseGadgetXXXXXX from the Muse phone app with Developer mode enabled. No token was requested in chat or read from the UI.
+MuseBridge was launched using `Start-MuseBridge.ps1`. The owner needs to select Pair PC, choose COM3, enter the SDK token in the masked field, and add MuseGadgetXXXXXX from the Muse phone app with Developer mode enabled. No token was requested in chat or read from the UI.
 
 Phone discovery/provisioning, live Muse connection/chat/health invocation, token refresh and board-unplug behavior remain pending. After pairing, resume MB-03 before adding broader tools.
 
 ## Owner follow-up
 
-the owner subsequently reported: “Ok, so it works.” This is owner-reported success of the setup experience; no additional independent capture of live chat, bridge.health, token rotation or board-unplug behavior was collected in that follow-up. The current source still advertises only bridge.health. Do not re-pair the working setup merely to resume development. Next work is targeted live verification and MB-04 local execution, followed by voice and desktop tools.
+The owner subsequently reported: “Ok, so it works.” This is owner-reported success of the setup experience; no additional independent capture of live chat, bridge.health, token rotation or board-unplug behavior was collected in that follow-up. The current source still advertises only bridge.health. Do not re-pair the working setup merely to resume development. Next work is targeted live verification and MB-04 local execution, followed by voice and desktop tools.

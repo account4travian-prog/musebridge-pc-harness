@@ -14,6 +14,7 @@ _INTERNAL_KEYS = {"call_id", "lifecycle", "after_edit_hooks", "hook_summary", "h
 _IDENTITY_KEYS = {"job_id", "edit_id", "exit_code", "request_id", "run_id", "invocation_id", "hook_id", "code", "state"}
 _BASE64_KEYS = {"base64", "data_base64", "image_base64", "image_data_base64", "encoded_image", "image", "image_data"}
 _CODES = {
+    'project_busy', 'desktop_unavailable',
     "ambiguous_conversation", "no_project", "read_only", "paused", "needs_desktop_control",
     "owner_active", "not_read", "changed_since_read", "no_match", "ambiguous_match",
     "path_outside_project", "too_large", "stale_ref", "shell_unavailable", "timeout",
@@ -32,6 +33,7 @@ _URL = re.compile(r"(?i)\bhttps?://[^\s<>\"']+")
 _WINDOWS_PATH = re.compile(r"(?i)(?<![\w])(?:[A-Z]:[\\/]|\\\\)[^\r\n<>\"|?*]+")
 
 _DEFAULT_HINTS = {
+    'project_busy':'Wait for the other project writer to finish, or create a separate worktree.',
     'manual_review_required': 'Ask the owner to review this task in the local Tasks view; a model cannot approve it.',
     'check_required': 'Provide task.verify(command="...") or store a check with task.set before verifying.',
     'restore_scope_required': 'Review the changes, then pass a project-relative path or a run to change.restore.',

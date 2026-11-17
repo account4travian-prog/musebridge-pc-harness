@@ -46,3 +46,16 @@ removed.
 
 Fixture strings inside tests (for example a value that looks like a token,
 used to verify redaction) are synthetic test data, reviewed individually.
+
+## Update, 2026-11-16
+
+The tree was refreshed from the private working tree at candidate 0.8.0,
+including the floating companion work (MB-36/MB-37) that had not yet been
+committed anywhere. The same exclusions and replacements as the original
+publication were applied: the upstream SDK checkout stays out, build and
+session folders stay out, personal and device identifiers were replaced
+with generic terms, and the board photograph was re-encoded from the
+original camera file to strip its EXIF (phone model and timestamp; no
+GPS data was present). Secret scanning (gitleaks) and the denylist greps
+were re-run over the refreshed tree before publication: no findings
+outside the LICENSE copyright line.

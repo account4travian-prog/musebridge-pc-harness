@@ -8,6 +8,41 @@ For development on the secondary monitor, use `pythonw -m musebridge.app --secon
 
 ## Projects and conversations
 
+### The Muse agent companion and Main
+
+The Muse agent is a transparent floating cutout while MuseBridge is open. Idle shows a
+small handle. Hover reveals chat, voice, activity and options. Click the avatar
+or chat control for a compact **Main** composer; its plus menu offers image/file
+attachments and real Main tools/controls. Escape collapses it without losing
+the draft. The outward arrow opens full Main history, workspace and execution
+profile. Main and the harness side chat keep independent drafts and replies.
+
+The voice icon opens controls for an explicitly selected **dedicated** conversation.
+Start the call there after its first confirmed text request; opening controls
+does not open the microphone. Mute, interruption and Hang up are explicit. The
+chosen voice target survives view changes. Main itself remains text-only.
+
+Drag the Muse agent to move it. Right-click/options expose size, Reduce motion, static
+image import, optional original **Portrait video animations**, position reset,
+hide/recovery and global Stop Work/Resume. View -> Show the Muse agent recovers a hidden
+pet. The original videos have opaque backgrounds; the default cutout uses a
+small silent bob. Reduced motion is still; hidden playback stops. Minimize the
+harness to keep the Muse agent available. Quitting saves both drafts and stops all owned
+work/calls/windows. A reply animation is not verified task completion.
+
+### Prepared owner checks
+
+Application -> Owner checks (also in the Atlas options) opens the real-test guide.
+Preparation creates a disposable Desktop-control project, opens its unique empty
+Notepad input on the secondary display, grants only that window for screenshots,
+and drafts the desktop request. It sends nothing and opens no microphone.
+Load the desktop prompt, Send in the harness, then foreground Notepad and leave
+input idle. Voice controls select the same test chat. Check saved files and
+record only actual observations. [Exact current steps](docs/OWNER-ACCEPTANCE-2026-11-16.md),
+[current implementation evidence](evidence/MB-37b-compact-and-owner-checks.md).
+
+### Dedicated project conversations
+
 The current development build adds `shell.run` for commands and `shell.job` for
 their running handles. Quick commands return output and exit code together;
 commands exceeding 25 seconds continue as owned jobs. PowerShell, cmd and installed
@@ -16,7 +51,7 @@ Shell results are short by default; use the returned log handle for retained
 output. Discarded middle output cannot be recovered. See the
 [shell upgrade receipt](evidence/MB-26-shell.md) for validation and limitations.
 
-Create a project from Application → New project or the folder icon. Each project has separate conversations; the main Muse chat has no project file/shell scope. Instructions, drafts, plans, local projections and layout persist. Local transcripts do not replace Muse's remote history. See the UI for chat archive, search, export, Activity and Plan workflows.
+Create a project from Application → New project or the folder icon. Each project has separate conversations; Main uses its explicitly attached PC workspace. Up to three dedicated project chats plus Main can remain live on one gadget connection. Switching views lets background work continue; the sidebar marks active requests as Working. Two chats can read one project, but only one run may write a given root (including aliases/nested roots) at a time. A second writer receives project_busy; use separate worktrees for independent writes. Archiving holds future queued/visual sends; restoring does not resume them. Instructions, drafts, plans, local projections and layout persist. Local transcripts do not replace Muse's remote history.
 
 ## Harness features in 0.6.0
 
@@ -27,7 +62,7 @@ Create a project from Application → New project or the folder icon. Each proje
 - **Hooks:** explicitly configured PowerShell hooks can run before/after work tools, after file edit, before verification, or when a run ends. Use exact tool filters; status/discovery/cancel controls stay usable. Before-tool checks gate execution (up to 8 seconds per call; a pending check prevents the original operation). Hook jobs bypass remote routing, preventing recursive hook dispatch. Commands receive bounded JSON metadata in `$env:MUSEBRIDGE_HOOK_CONTEXT` and run as your Windows account. Import hook-plugin JSON through Local lifecycle hooks, review its commands, then enable individual imported hooks; imports start disabled.
 - **MCP:** configure local stdio servers and explicit per-tool read/project-write grants. Muse cannot enable servers or grant access. No OAuth flow is provided. Close integrations when finished.
 
-These tools operate on the selected project, but that selection is not an OS security sandbox. Inspect commands, grants, hook configuration, Git changes and terminal input before use.
+These tools operate on the requesting chat's bound project; the viewed chat does not reroute background work. The binding is not an OS security sandbox. Inspect commands, grants, hook configuration, Git changes and terminal input before use.
 
 ## Existing workflows
 
@@ -47,15 +82,15 @@ Conversation actions -> **Checks after file edits...** lets you save a PowerShel
 
 Conversation actions -> **Finish-line verification...** saves a separate check command and the optional **Auto-check after changes** setting, off by default. After an attributed dedicated-chat request settles with unchecked file-tool edits, it queues one prompt asking Muse to run that command and fix failures or explain why it does not apply. Changes shows "not checked since last edit"; `bridge.context` reports `unverified_changes`. A successful `shell.run` must finish with exit 0 after the edits; a task check needs an accepted verification receipt. Older, failed and still-running checks do not clear newer edits. A successful command alone does not certify the task's meaning.
 
-The prompt shares the existing Queue and its holds. After restart, Stop Work, disconnect or a chat switch, use Queue -> **Resume pending** when ready; this button also enables future prompts when the queue is empty. Saving settings does not resume work. There is at most one finish-line prompt per user request, including its screenshot and goal continuations; it occupies an existing goal round within the five-round cap. Main remains excluded. Shell-only file changes are not detected by this tracker until MB-32. See [finish-line evidence](evidence/MB-31b-finish-line.md).
+The prompt shares the existing Queue and its holds. After restart, Stop Work, disconnect or archive, use Queue -> **Resume pending** when ready; this button also enables future prompts when the queue is empty. Switching views preserves delivery. Saving settings does not resume work. There is at most one finish-line prompt per user request, including its screenshot and goal continuations; it occupies an existing goal round within the five-round cap. Main remains excluded. Run-end snapshots also report eligible shell-only changes; excluded/unknown changes cannot be certified. See [finish-line evidence](evidence/MB-31b-finish-line.md) and [recovery limits](evidence/MB-32-recovery.md).
 
 ## Development
 
-Main now uses the dedicated `C:\Users\the owner\Documents\MuseBridge\PC-Workspace` folder. Click the workspace button beside the composer to attach an existing workspace or choose a new folder for the same chat. Rebinding keeps the conversation and draft, refuses active local writes/jobs, and retires old requests. Commands run with your Windows user permissions; the folder is not an OS sandbox.
+Main now uses the dedicated `C:\Users\Example\Documents\MuseBridge\PC-Workspace` folder. Click the workspace button beside the composer to attach an existing workspace or choose a new folder for the same chat. Rebinding keeps the conversation and draft, refuses active local writes/jobs, and retires old requests. Commands run with your Windows user permissions; the folder is not an OS sandbox.
 
-Application -> **Teach Muse this PC...** previews a short request to fetch the Windows skill and save it on Muse's VM. Click **Send skill request** once. When Muse confirms it actually saved version 1, reopen the dialog and click **Muse confirmed it saved this skill - record confirmation**. Merely sending the request does not mark the skill installed. Your composer and pending attachments are preserved.
+Application -> **Teach Muse this PC...** previews a short request to fetch the Windows skill and save it on Muse's VM. Click **Send skill request** once. When Muse confirms it actually saved version 2, reopen the dialog and click **Muse confirmed it saved this skill - record confirmation**. Merely sending the request does not mark the skill installed. Your composer and pending attachments are preserved. Version 1 was confirmed earlier; version 2 needs its own confirmation.
 
-The first outgoing message per connection or scope change includes a short PC header; ordinary follow-ups send your text unchanged. Muse reads the full Markdown context through `bridge.context`, including saved project instructions and guarded `AGENTS.md`.
+The first outgoing message per connection or scope change includes a short PC header. Each real connected request also supplies a short conversation/run binding so simultaneous chats can identify their work; follow-ups omit the unchanged environment header. Muse reads the full Markdown context through `bridge.context`, including saved project instructions and guarded `AGENTS.md`. These supplied IDs detect mismatched bookkeeping; the SDK cannot authenticate the originating chat of a tool callback.
 
 Live Main-chat command execution is verified. Main's current upstream stream omits request linkage on replies and task status, so the harness cannot safely certify that a particular Main request finished. Use **New conversation** in the PC workspace for work that needs automatic goal/queue continuation. The existing Main chat remains usable for manual requests; a visible reply and successful command are separate from a verified finished goal.
 
@@ -65,12 +100,18 @@ uv sync
 .venv\Scripts\python.exe -m pytest -q tests
 ```
 
-Current test counts and live results are in the [0.6 receipt](evidence/FIVE-CAPABILITIES-0.6.md); the [MB-23 integrated receipt](evidence/MB-23-integration.md) records the earlier 0.5 baseline. Feature evidence and limitations are in [evidence](evidence/) and the current [MASTERPLAN](MASTERPLAN.md). No native Muse fork/steer/worker/compaction API is available through the pinned SDK; the handoff is an explicit summary-seeded new chat.
+Current test counts and live results are in the [closeout ledger](evidence/HARNESS-1.0.md). Older receipts retain their dated scope. No native Muse fork/steer/worker/compaction API is available through the pinned SDK; the handoff is an explicit summary-seeded new chat.
 ## Artifacts and attachments
 
 The Artifacts tab stores immutable conversation-owned snapshots (8 MiB each, 64 MiB raw files per conversation). UTF-8 text, PDF and Word `.docx` documents can be previewed/attached and read by Muse in pages. Document parsing runs in bounded background processes: at most 100 PDF pages, 256 KiB extracted UTF-8, 8 seconds, two parsers and a Windows memory cap. Successful text is cached against the immutable snapshot; export preserves original bytes and SHA-256. Encrypted/scanned/unsupported documents return a clear limitation; no OCR, old `.doc`, macros or executable preview is provided. Pending document references go only with the next manual send, and block queueing until sent/removed.
 
-Images still support explicit selection/paste. For a text-chat visual task, open Conversation actions → Automatic visual feedback, enable the project’s owned browser and/or choose one specific desktop window, then Apply. Desktop capture additionally requires Desktop control. Muse uses `vision.observe`, finishes its current turn, and automatically receives the image as a labelled new turn in that same chat. It continues with the newly supplied run ID. A chain permits at most six images; no inline-tool-image or native steering API is implied. Stop cancels pending images, switching/disconnecting holds them, restart pauses grants, and uncertain sends are never replayed. Review/resume from that settings dialog. The voice channel does not use this text-image continuation adapter.
+Images still support explicit selection/paste. For a text-chat visual task, open Conversation actions → Automatic visual feedback, enable the project’s owned browser and/or choose one specific desktop window, then Apply. Desktop capture additionally requires Desktop control. Muse uses `screen.look` (compatible `vision.observe`), finishes its current turn, and receives the image as a labelled new turn in that same chat. It continues with the newly supplied run ID. A chain permits at most six images. Stop cancels pending images; disconnect/archive holds them; restart pauses grants. Switching views preserves delivery. Uncertain sends are never replayed. Machine images are resized to longest edge 1568 and encoded under 2 MiB, with optional reference labels and validated original-image-coordinate crops. Explicit owner attachments retain their original bytes. The voice channel does not use this text-image continuation adapter.
+
+## Browser, desktop and recovery
+
+Browser snapshots return bounded accessibility text and element references for the owned headless Chromium context. Desktop snapshots return window/process-scoped UIA references. Actions report concise changes; stale or wrong-chat references require a fresh snapshot. Desktop actions still require an idle unlocked session, the intended foreground window and allowed elevation. Mouse fallback rechecks activity immediately before input. Settings -> Windows OCR fallback enables OS OCR for unreadable windows (on by default); OCR text references are observations, not actionable UIA controls.
+
+Changes includes eligible run-level shell changes as well as direct file checkpoints. Private bare-Git snapshots preserve bytes without touching the project's index/HEAD. Review before restoring. Restore refuses later file changes and different roots/chats, and preflights selected files before publishing. A multi-file restore can partially finish after I/O failure; inspect retained evidence before a deliberate retry. It cannot undo network/install/database effects, excluded files, effects outside the project or unknown runs. Snapshots skip links/junctions, ignored/private/build files and files over 8 MiB, with bounded candidate/byte limits. The folder is not an OS sandbox. See [the recovery receipt](evidence/MB-32-recovery.md).
 
 ## Overview
 

@@ -1,0 +1,9 @@
+{
+  "one_ui_process": true,
+  "harness_visible": true,
+  "atlas_visible": true,
+  "all_within_work_area": true,
+  "all_on_secondary": true,
+  "live_prompt_sent": false,
+  "connection_indicator_connected": true
+}

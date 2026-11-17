@@ -111,7 +111,7 @@ def _app():
     return QApplication.instance() or QApplication([])
 
 
-def test_scope_chooser_attaches_existing_workspace_to_same_main_chat(tmp_path,monkeypatch):
+def test_scope_chooser_attaches_existing_workspace_to_same_side_chat(tmp_path,monkeypatch):
     _app();window=Window(Worker(Store(tmp_path/"ui-state")))
     try:
         root=tmp_path/"local-workspace";root.mkdir()
@@ -128,11 +128,11 @@ def test_scope_chooser_attaches_existing_workspace_to_same_main_chat(tmp_path,mo
         window.plan_editor.setPlainText("same-chat plan")
         window.plan_dirty=True
         window.attach_existing_workspace()
-        assert window.current_id==original_id=="main"
-        assert window.worker.catalog.conversation("main")["project_id"]==project["id"]
-        assert window.worker.conversation_id=="main"
-        assert window.worker.catalog.draft("main")=="draft survives workspace attachment"
-        assert window.worker.catalog.context("main")["plan"]=="same-chat plan"
+        assert window.current_id==original_id!="main"
+        assert window.worker.catalog.conversation(original_id)["project_id"]==project["id"]
+        assert window.worker.conversation_id==original_id
+        assert window.worker.catalog.draft(original_id)=="draft survives workspace attachment"
+        assert window.worker.catalog.context(original_id)["plan"]=="same-chat plan"
         bound_menu=window.workspace_menu()
         labels=[action.text() for action in bound_menu.actions() if not action.isSeparator()]
         assert labels==["Open Folder","Attach existing workspace…","Create workspace from folder…"]
@@ -150,8 +150,8 @@ def test_create_workspace_chooser_binds_without_creating_a_new_chat(tmp_path,mon
                             lambda *args,**kwargs:str(root))
         monkeypatch.setattr(QInputDialog,"getText",lambda *args,**kwargs:("Fixture",True))
         window.create_workspace_from_folder()
-        assert window.current_id==original_id=="main"
-        assert window.worker.catalog.conversation("main")["project_id"]
-        assert len(window.worker.catalog.conversations())==1
+        assert window.current_id==original_id!="main"
+        assert window.worker.catalog.conversation(original_id)["project_id"]
+        assert len(window.worker.catalog.conversations())==2
     finally:
         window.close()

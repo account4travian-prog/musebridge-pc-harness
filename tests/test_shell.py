@@ -40,12 +40,16 @@ def test_new_chat_keeps_workspace_draft_plan_and_can_archive(tmp_path):
         w.search.setText('Original')
         assert not w.nav_items[c['id']].isHidden()
         assert w.nav_items[new_id].isHidden()
+        w.worker.queue.add(new_id,'Do not send after archive')
+        assert new_id in w.worker.queue.enabled
         w.search.clear();w.archive_conversation()
-        assert w.current_id=='main'
+        assert w.current_id!='main' and w.current_id!=new_id
         assert new_id not in w.nav_items
         assert w.worker.catalog.conversation(new_id)['archived']==1
+        assert new_id in w.worker.queue.held and new_id not in w.worker.queue.enabled
         w.worker.catalog.archive_conversation(new_id,False);w.refresh_conversations()
         assert new_id in w.nav_items
+        assert new_id in w.worker.queue.held
     finally:w.close()
 
 
@@ -66,14 +70,15 @@ def test_stream_updates_preserve_reading_position(tmp_path):
 def test_invalid_plan_keeps_editor_open_and_does_not_continue(tmp_path):
     application=app();w=Window(Worker(Store(tmp_path)))
     try:
-        w.worker.catalog.plan('main',text='Saved plan',goal='Saved goal')
+        original_id=w.current_id
+        w.worker.catalog.plan(original_id,text='Saved plan',goal='Saved goal')
         w.load_plan();w.plan_editor.setPlainText('x'*16001)
         calls=[];w.worker.run_goal=lambda:calls.append('run')
         w.save_and_continue_goal()
         assert not calls and w.plan_dirty
-        assert w.worker.catalog.context('main')['plan']=='Saved plan'
+        assert w.worker.catalog.context(original_id)['plan']=='Saved plan'
         w.new_conversation()
-        assert w.current_id=='main' and len(w.plan_editor.toPlainText())==16001
+        assert w.current_id==original_id and len(w.plan_editor.toPlainText())==16001
         assert not w.close()
         w.plan_editor.setPlainText('Corrected plan')
         assert w.close()

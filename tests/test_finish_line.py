@@ -173,10 +173,13 @@ def test_queue_hold_stop_restart_and_new_request_fence_pending_prompt(harness):
 
 
 def test_other_conversation_cannot_supply_check_evidence(harness):
-    _, catalog, router, cid, _ = harness
+    root, catalog, router, cid, _ = harness
     run = begin(router, cid)
     write(router, cid)
-    other = catalog.create_conversation('Other', catalog.conversation(cid)['project_id'])['id']
+    other_root=root.parent/'other-project'
+    other_root.mkdir()
+    other_project=catalog.create_project('Other project',other_root)
+    other = catalog.create_conversation('Other', other_project['id'])['id']
     begin(router, other)
     assert router.call('shell.run', {'conversation_id': other, 'command': 'exit 0'})['ok']
     assert router.finish_line.summary(cid, run)['unverified_changes'] == 1

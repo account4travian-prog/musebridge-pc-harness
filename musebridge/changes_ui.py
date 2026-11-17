@@ -29,7 +29,9 @@ def refresh_changes(w):
     latest=w.worker.router.shadow.latest(w.current_id)
     if latest:
         snapshot=w.worker.router.shadow.review(w.current_id,latest)
-        rows=[{**item,'edit_id':'shadow:'+latest+':'+item['path'],'state':'finished'} for item in snapshot['edits']]+rows
+        direct={(item['run_id'],item['path']) for item in rows}
+        rows=[{**item,'edit_id':'shadow:'+latest+':'+item['path'],'state':'finished'}
+              for item in snapshot['edits'] if (latest,item['path']) not in direct]+rows
     feedback={run:w.worker.router.finish_line.summary(w.current_id,run)
               for run in {row['run_id'] for row in rows}}
     fingerprint=(w.current_id,tuple((r['edit_id'],r['state'],r['restored']) for r in rows),

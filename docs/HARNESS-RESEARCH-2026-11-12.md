@@ -166,7 +166,7 @@ be about 130 KB or less.
 
 **F7. One live chat at a time.** Tool calls are refused unless they target the conversation
 currently selected in the UI (`core.py:76`, `tooling.py:184-185`), and switching chats marks the
-run interrupted (`core.py:108-109`). the owner cannot let Muse work in one project while chatting in
+run interrupted (`core.py:108-109`). The owner cannot let Muse work in one project while chatting in
 another.
 
 **F8. Desktop hands are short.** `desktop.act` supports only `focus`, `invoke`, `set_text`

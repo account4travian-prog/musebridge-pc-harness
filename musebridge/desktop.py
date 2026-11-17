@@ -27,6 +27,13 @@ WINDOW_CAPTURE_TIMEOUT = 8
 MIN_IDLE_MS = 2_000
 
 
+class DesktopActionRefused(ValueError):
+    no_effect=True
+    code='desktop_unavailable'
+    hint=('Leave the desktop idle and ask the owner to bring the permitted non-elevated window forward. '
+          'Stop desktop work while the gate is blocked; do not bypass it with shell, scripts or other tools.')
+
+
 def _param(description: str, kind: str = "string") -> dict:
     return {"type": kind, "description": description}
 
@@ -82,6 +89,44 @@ def _desktop():
     except ImportError as exc:
         raise OSError("pywinauto is not installed in this Python environment") from exc
     return Desktop(backend="uia")
+
+
+@contextlib.contextmanager
+def _physical_coordinates():
+    """Keep UIA rectangles and synthesized input in physical pixels on mixed DPI screens."""
+    setter=None
+    previous=None
+    if os.name=='nt':
+        try:
+            setter=ctypes.WinDLL('user32').SetThreadDpiAwarenessContext
+            setter.argtypes=[ctypes.c_void_p]
+            setter.restype=ctypes.c_void_p
+            previous=setter(ctypes.c_void_p(-4))
+        except (AttributeError,OSError):setter=None
+    try:yield
+    finally:
+        if setter and previous:setter(previous)
+
+
+def _fullscreen_foreground(hwnd):
+    """Refuse taking focus away from a fullscreen foreground app, including games."""
+    if os.name!='nt' or not hwnd:return False
+    from ctypes import wintypes
+    class Rect(ctypes.Structure):
+        _fields_=[(name,wintypes.LONG) for name in ('left','top','right','bottom')]
+    class Monitor(ctypes.Structure):
+        _fields_=[('size',wintypes.DWORD),('monitor',Rect),('work',Rect),('flags',wintypes.DWORD)]
+    user=ctypes.WinDLL('user32')
+    user.GetWindowRect.argtypes=[wintypes.HWND,ctypes.POINTER(Rect)]
+    user.MonitorFromWindow.argtypes=[wintypes.HWND,wintypes.DWORD]
+    user.MonitorFromWindow.restype=wintypes.HMONITOR
+    user.GetMonitorInfoW.argtypes=[wintypes.HMONITOR,ctypes.POINTER(Monitor)]
+    rect=Rect()
+    if not user.GetWindowRect(hwnd,ctypes.byref(rect)):return False
+    info=Monitor()
+    info.size=ctypes.sizeof(info)
+    if not user.GetMonitorInfoW(user.MonitorFromWindow(hwnd,2),ctypes.byref(info)):return False
+    return all(abs(getattr(rect,name)-getattr(info.monitor,name))<=2 for name in ('left','top','right','bottom'))
 
 
 def _input_desktop_name() -> str:
@@ -419,7 +464,7 @@ class DesktopTools:
         clean = self._validate(name, params)
         if guard:clean['_guard']=guard
         try:
-            with _com_initialized():
+            with _com_initialized(),_physical_coordinates():
                 return self._dispatch(name, clean)
         except (ValueError, OSError):
             raise
@@ -464,6 +509,18 @@ class DesktopTools:
         except Exception:
             return None
 
+    def _window_rect(self, hwnd, window=None):
+        """Physical outer bounds matching PrintWindow, rather than a UIA client rect."""
+        if os.name=='nt':
+            from ctypes import wintypes
+            rect=wintypes.RECT()
+            user=ctypes.WinDLL('user32',use_last_error=True)
+            user.GetWindowRect.argtypes=[wintypes.HWND,ctypes.POINTER(wintypes.RECT)]
+            user.GetWindowRect.restype=wintypes.BOOL
+            if user.GetWindowRect(hwnd,ctypes.byref(rect)):
+                return {key:int(getattr(rect,key)) for key in ('left','top','right','bottom')}
+        return self._rect(window) if window is not None else None
+
     def _window_metadata(self, wrapper) -> dict | None:
         try:
             if not wrapper.is_visible():
@@ -474,6 +531,8 @@ class DesktopTools:
                     "title": self._short(wrapper.window_text(), 300),
                     "class_name": self._short(wrapper.class_name(), 200),
                     "visible": True, "enabled": bool(wrapper.is_enabled()),
+                    "focused":handle==_foreground_hwnd(),
+                    "minimized":bool(getattr(wrapper,'is_minimized',lambda:False)()),
                     "rectangle": self._rect(wrapper)}
         except Exception:
             return None
@@ -520,6 +579,16 @@ class DesktopTools:
     def _foreground():
         return _foreground_hwnd()
 
+    def _process_windows(self,pid):
+        try:
+            result=[]
+            for wrapper in _desktop().windows(top_level_only=True,visible_only=True)[:100]:
+                if int(wrapper.process_id())==pid:
+                    record=self._window_metadata(wrapper)
+                    if record:result.append(record)
+            return result
+        except Exception:return []
+
     def _tree(self, window) -> tuple[list[dict], dict[str, object], bool]:
         nodes = []
         wrappers = {}
@@ -561,7 +630,7 @@ class DesktopTools:
         result = {"window": {"window_handle": hwnd,
                              "title": self._short(window.window_text(), 300),
                              "process_id": int(window.process_id()),
-                             "rectangle": self._rect(window)},
+                             "rectangle": self._window_rect(hwnd,window)},
                   "controls": nodes, "count": len(nodes), "truncated": truncated,
                   "max_depth": MAX_TREE_DEPTH, "max_controls": MAX_TREE_NODES}
         return self._fit_result_list(result, "controls")
@@ -598,20 +667,22 @@ class DesktopTools:
     def _guard_mutation(self, hwnd: int, pid: int, action: str, foreground_before: int) -> None:
         session_id, unlocked = _session_state()
         if session_id == 0 or not unlocked:
-            raise ValueError("interactive desktop is locked or unavailable; action refused")
+            raise DesktopActionRefused("interactive desktop is locked or unavailable; action refused")
         if _process_session_id(pid) != session_id:
-            raise ValueError("target window is outside the current interactive session")
+            raise DesktopActionRefused("target window is outside the current interactive session")
         if _integrity_level(pid) > _integrity_level(os.getpid()):
-            raise ValueError("target runs at a higher integrity level; elevated targets are not supported")
+            raise DesktopActionRefused("target runs at a higher integrity level; elevated targets are not supported")
         if _idle_ms() < MIN_IDLE_MS:
-            raise ValueError("user activity was detected within the last 2 seconds; action refused")
+            raise DesktopActionRefused("user activity was detected within the last 2 seconds; action refused")
         if not _is_window(hwnd):
-            raise ValueError("target window is no longer valid")
+            raise DesktopActionRefused("target window is no longer valid")
         foreground_now = _foreground_hwnd()
         if foreground_now != foreground_before:
-            raise ValueError("foreground window changed during action preparation; action refused")
+            raise DesktopActionRefused("foreground window changed during action preparation; action refused")
+        if action=='focus' and foreground_now!=hwnd and _fullscreen_foreground(foreground_now):
+            raise DesktopActionRefused('A fullscreen app is foreground; ask the owner to bring the target forward when ready')
         if action != "focus" and foreground_now != hwnd:
-            raise ValueError("target is not foreground; request an explicit focus action first")
+            raise DesktopActionRefused("target is not foreground; request an explicit focus action first")
 
     def _act(self, hwnd: int, pid: int, window, params: dict) -> dict:
         selector, control, node = self._select_control(window, params)
@@ -655,12 +726,15 @@ class DesktopTools:
             raise ValueError("target window is no longer valid")
         if _window_pid(hwnd) != expected_pid:
             raise ValueError("target window process changed before screenshot")
+        rectangle=self._window_rect(hwnd)
         data = _capture_window_printwindow(hwnd, expected_pid)
         self._require_session()
         if not _is_window(hwnd):
             raise ValueError("target window closed while capturing screenshot")
         if _window_pid(hwnd) != expected_pid:
             raise ValueError("target window process changed while capturing screenshot")
+        if rectangle!=self._window_rect(hwnd):
+            raise ValueError('Target window moved or resized during capture; request a fresh observation')
         safe_id = hashlib.sha256(cid.encode("utf-8")).hexdigest()[:20]
         directory = self.artifact_dir / safe_id
         target = directory / (f"{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}.jpg")
@@ -674,7 +748,7 @@ class DesktopTools:
         except Exception:
             target.unlink(missing_ok=True)
             raise
-        return {"path": str(target), "size": len(data), "format": "jpeg"}
+        return {"path": str(target), "size": len(data), "format": "jpeg", "rectangle":rectangle}
 
     def close(self) -> None:
         self._closed = True

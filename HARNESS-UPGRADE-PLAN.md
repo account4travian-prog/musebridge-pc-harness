@@ -1,6 +1,6 @@
-# MuseBridge harness upgrade plan (MB-24 to MB-36)
+# MuseBridge harness upgrade plan (MB-24 to MB-37)
 
-Written 2026-11-12 by a planning model for **the implementation agent**, at the owner's request. the owner asked for
+Written 2026-11-12 by a planning model for **the implementation agent**, at the owner's request. The owner asked for
 decisions and a plan, not implementation: nothing under `musebridge/` was changed while writing it.
 
 This file is the detailed backlog for everything after 0.6.0. [MASTERPLAN.md](MASTERPLAN.md) stays
@@ -82,7 +82,7 @@ keep or revert it on its merits. Do not claim an improvement you did not measure
 - Preserve OpenClawGateway and everything outside this project.
 - Desktop control never steals input while the owner is using the PC (keep the idle / foreground /
   lock checks). Do not disturb a running game.
-- Development helpers: at most two helper-model workers, given disjoint files. The owner's standing model rules (kept in his private notes) bound which models may be used.
+- Development helpers: at most two helper-model workers, given disjoint files. Never Astra or the implementation agent.
 - Never print or log credentials, tokens or raw profile paths. Evidence stays sanitized.
 - Never run destructive tests against the real profile under `%LOCALAPPDATA%\MuseBridge`. Use
   `MUSEBRIDGE_DATA_DIR` pointing at a temp directory.
@@ -105,7 +105,7 @@ keep or revert it on its merits. Do not claim an improvement you did not measure
 | D12 | Checkpoints move to a shadow Git repository per project so shell-made changes are also restorable. | F10. |
 | D13 | Several project chats can be live at once (limit 3). The UI's selected chat no longer decides where tool calls go. | F7. |
 | D14 | `shell.run` offers `shell: powershell | bash | cmd`. PowerShell 7 is preferred over 5.1 when installed. The default is chosen by eval (P-4), starting as PowerShell. | F13. |
-| D15 | Windows built-in OCR may be used as a **perception fallback** for windows with no usable accessibility tree. It is an OS text-recognition API, not a reasoning agent. the owner can veto (section 9). | F8. |
+| D15 | Windows built-in OCR may be used as a **perception fallback** for windows with no usable accessibility tree. It is an OS text-recognition API, not a reasoning agent. The owner can veto (section 9). | F8. |
 | D16 | Version numbers: 0.6.1 after Phase 0, 0.7.0 after Phase 3, 0.8.0 after Phase 5, 1.0.0 at closeout. Contract version goes 1 -> 2 in Phase 2. | - |
 | D17 | Old tool names keep working in the dispatcher for one release (not registered, still routed) so anything Muse remembers does not break. | safety |
 
@@ -435,7 +435,7 @@ Shared rules for all v2 tools (implement once, in the router):
      the eval runs showed Muse getting wrong, not from imagination.
   2. **Install path.** Add Application -> "Teach Muse this PC": it sends a normal chat message
      asking Muse to call `bridge.context(section="skill")`, save the returned text as a skill
-     named `gadget-musebridge-windows-pc` on its VM, and confirm. the owner clicks it once per skill
+     named `gadget-musebridge-windows-pc` on its VM, and confirm. The owner clicks it once per skill
      version. `bridge.context` reports `skill_version`; the header mentions a newer version only
      when one exists.
   3. **Header.** Replace the preamble in `Core.send` (`core.py:189-214`) with at most 8 lines of
@@ -657,6 +657,25 @@ Shared rules for all v2 tools (implement once, in the router):
 
 ---
 
+### MB-37 Floating the Muse agent companion
+
+Owner request, 2026-11-15: Main is interacted with through a floating pet/widget;
+the harness itself keeps dedicated side conversations. The Muse agent can provide his
+avatar, potentially animated. Research and the implementation/asset handoff are
+in [the companion design](docs/FLOATING-COMPANION-RESEARCH-2026-11-15.md).
+
+State (2026-11-16): compact revision adds transparent quiet idle, hover controls,
+an inline Main composer/attachment menu, explicitly targeted dedicated voice
+controls, and an owner-check preparation screen. Original portrait videos are
+optional. Full suite 619 passed/5 skipped; final control-window checks 10 passed.
+Native transparency/hover/quick-draft/video/placement/focus checks passed.
+[Current evidence](evidence/MB-37b-compact-and-owner-checks.md); the [initial
+companion receipt](evidence/MB-37-companion.md) retains its November 15 scope.
+The owner is ready for physical checks. The [current walkthrough](docs/OWNER-ACCEPTANCE-2026-11-16.md)
+and real disposable Notepad/voice session are prepared; results remain owner work.
+Main voice and automatic continuation remain refused/unattributed. Existing
+MB-24..36 frozen evidence and open 1.0 gates retain their scope.
+
 ## 5. Tool contract v2 (reference)
 
 `conversation_id` is accepted by every tool and omitted below. `?` = optional.
@@ -768,7 +787,7 @@ Tasks 9, 11 and 12 will fail or be awkward on the baseline. That is the point: r
 | You need something from section 3.1 changed | Ask the owner; meanwhile do the items that do not depend on it. |
 | Schema migration needed | Additive only (`ALTER TABLE ADD COLUMN`, new tables), inside `BEGIN IMMEDIATE`, bump `user_version`, test on a copy of a 0.6 database. Follow `execution.py:31-49`. |
 | Code style | The existing code packs statements with `;`. New and touched code: one statement per line, short functions, a docstring on public functions. Do not reformat files you are not changing. |
-| Delegating to helper models | Disjoint files only; you own `tooling.py`, `core.py`, `execution.py`, migrations and the contract. Review and run tests on everything returned. |
+| Delegating to the helper model | Disjoint files only; you own `tooling.py`, `core.py`, `execution.py`, migrations and the contract. Review and run tests on everything returned. |
 
 ---
 
@@ -805,26 +824,41 @@ Tick the box, add the commit hash, and write one line per item in the log.
 - [x] MB-31a Edit diagnostics
 - [x] MB-31b Finish-line check
 - [x] MB-31c Repeat and stall hints
-- [ ] MB-32 Shadow-Git checkpoints
-- [ ] MB-33 Browser v2
+- [x] MB-32 Shadow-Git checkpoints
+- [x] MB-33 Browser v2
 - [ ] MB-34 Desktop v2
 - [ ] MB-35 `screen.look`, eval `v2-eyes`, 0.8.0
 - [ ] MB-36a Parallel chats
 - [ ] MB-36b Closeout, eval `v1.0`, 1.0.0
+- [ ] MB-37 Floating the Muse agent companion (implemented; owner/live-message acceptance open)
 
-Current checkpoint (2026-11-13): MB-30 is complete. Owner confirmed the VM
-skill; P-5 passed with a 527-byte first header and zero added bytes on thirteen
-follow-ups. Frozen v2-context passed 12/12: 139 calls, 4 failed calls, 81,159 result
-bytes, 6,543 preamble bytes over 14 sends, 771.893 seconds. Local suite: 500 passed,
-5 skipped. Version 0.7.0 is installed; contract remains 2. See
-`evidence/MB-30-context.md` and `docs/REMAINING-WORK-2026-11-13.md`.
-MB-31a and MB-31b are complete: syntax feedback, optional after-edit checks,
-revision-bound unchecked-change feedback and one opt-in queued finish-line prompt.
-Latest suite and limits: `evidence/MB-31b-finish-line.md`. Begin MB-31c. Keep phases/items in order. Main command execution works, while
-shared-Main request completion remains unattributed; automatic continuation
-uses dedicated project chats.
+Current checkpoint (2026-11-14): MB-31c, MB-32 and MB-33 are complete.
+MB-34/35 and MB-36a are implemented with fixture/live evidence, while their
+acceptance gates remain open. Candidate 0.8.0, contract 2, schema 5, skill 2.
+Foundation 92ea905 passed 585 tests/5 skips. The parallel candidate passed 594/5
+before review refinements; final counts/evaluations are maintained in
+`evidence/HARNESS-1.0.md`. Real two-chat overlapping commands passed on one
+identity while Main was selected. Native read-only 125%/150% Qt-scale geometry
+passed after correcting UIA client bounds to physical outer capture bounds.
+Frozen v2-eyes scored 11/12, 143 calls, 6 failures (4.20%) and 8593 preamble
+bytes. Desktop capability was blocked by owner activity/fullscreen gates;
+its file-only checker success was correctly insufficient. Keep that failure
+and the missed 40% call-reduction target visible. Final v1.0 candidate eval is
+complete: 11/12, 123 calls, 2 failures (1.63%), 8557 preamble bytes. Final runtime
+0de011c passed 599 tests with 5 skipped; locked sync is clean. All baseline
+successes were retained. Numeric call/error/header thresholds were met, with
+the incomplete-desktop-task caveat. Do not merge or bump to 1.0 on incomplete
+acceptance. The owner deferred Notepad/voice/day-use; the exact walkthrough is
+`docs/OWNER-ACCEPTANCE-2026-11-14.md`, including Teach v2 confirmation.
+Shared-Main completion remains unattributed; dedicated chats drive automation.
 
 ### Log
+
+| Date | Item | Commit | Result / numbers / deviations |
+|---|---|---|---|
+| 2026-11-14 | MB-36a implementation / MB-36b candidate closeout | 0de011c | 599 passed, 5 skipped (419.95 s), locked dependencies clean. Real two-chat overlapping work passed on one session while Main was viewed. Final v1.0-label candidate eval 11/12, 123 calls, 2 failures, 8557 preamble bytes; desktop refused safety gates and stopped without shell substitution. Baseline successes retained; numeric thresholds met but twelve-task gate remains open. Keep parallel branch unmerged and candidate 0.8.0 until acceptance. Skill v2/owner desktop/voice/day-use deferred. See evidence/HARNESS-1.0.md and the exact owner walkthrough. |
+| 2026-11-14 | MB-31c/32 foundation | See foundation commit | Stall hints and private byte-preserving Git snapshots/restore implemented. Real project index/HEAD invariant, shell binary/CRLF recovery, owner conflict, creation/deletion, oversized owner file, I/O interruption/idempotent manual recovery, junction boundary and 20000-file warm performance fixtures pass. Corrected cold I/O, redundant warm imports and duplicate Changes rows. See evidence/MB-32-recovery.md. |
+| 2026-11-14 | MB-33..35 local implementation | See foundation commit | Reference-based browser and desktop controls, bounded diffs, OS OCR fallback, machine-image resizing/marks/crops. Full suite 585 passed, 5 skipped (349.44 s); targeted desktop/vision/packing 41 passed. Actual OS OCR read the synthetic code. Live task 9/11, pixel route, v2-eyes and owner Notepad remain acceptance gates. Owner chose later for Notepad/voice; exact walkthrough prepared. See evidence/MB-33-35-local.md. |
 
 | Date | Item | Commit | Result / numbers / deviations |
 |---|---|---|---|
@@ -843,7 +877,7 @@ uses dedicated project chats.
 | 2026-11-12 | MB-25b | 45cd986 | Complete controlled baseline: 9/12, 206 tool calls, 10 failed/uncertain (4.8544%), 945.327 s, 222548 result bytes, 35429 preamble bytes / 14 sends. Compare against evidence/eval/v1-baseline-complete-2026-11-12.json. Original report and supplemental source hashes retained: only three original chats proved to have zero admission were subsequently executed. Uncertain browser request never replayed. Long-command checker timeout and guarded desktop false pass remain failures. Fixed evaluator reconnection classification and checker descendant containment; 17 focused tests pass. Both native fixture modes verified secondary placement. |
 | 2026-11-12 | MB-25c | 4e26b31 | Early probes complete. P-1: 45 s returned correct code; 150 s completed locally but Muse reported timeout and did not recover code. Both incoming timeouts were 125000 ms despite descriptor 200000 ms: choose inline cap 25 s per plan. P-2: neither stock JPEG JSON envelope nor camera.capture naming produced visible pixels: route B. P-3: 3 edits, 0 failures, exact CRLF/tab bytes preserved. Questions/methods/observations/decisions and sanitized JSON are in evidence/MB-25-probes.md. Phase 2 can start with MB-26; P-4 and P-5 remain later gates. |
 | 2026-11-12 | MB-26 implementation checkpoint | 4b035fe / 0bb7f60 | shell.run/shell.job implemented with cap 25 s, hidden PowerShell/cmd/Git Bash, owned Job Object cancellation, merged UTF-8 output and bounded head/tail/log pages. Full suite 285 passed, 4 skipped; subsequent future-cursor guard passed targeted regression. Runtime contract remains version 1 with legacy IDs until MB-28/29; app version stays 0.6.1 until Phase 3. P-4 preparation is in progress; do not tick MB-26 or start MB-27 until the live shell comparison/default decision is recorded. See evidence/MB-26-shell.md. |
-| 2026-11-12 | MB-26 | a2544f6 | P-4 completed: PowerShell 5/5 and Git Bash 5/5, zero failed calls and commands for both; expected chain exit 3 passed. Retain PowerShell on the tie, keep Bash selectable. Source and local/full tests are in evidence/MB-26-shell.md; live checks in evidence/MB-26-shell-fluency.json. Added non-activating secondary-screen startup; 26 targeted UI/shell/probe tests passed. The apparent helper-model quota error came from an older worker state: the owner requested a fresh check, which succeeded (16 passed, 1 skipped). Continue with MB-27 using a helper model; normal app remains closed for upcoming identity-locked file probes. |
+| 2026-11-12 | MB-26 | a2544f6 | P-4 completed: PowerShell 5/5 and Git Bash 5/5, zero failed calls and commands for both; expected chain exit 3 passed. Retain PowerShell on the tie, keep Bash selectable. Source and local/full tests are in evidence/MB-26-shell.md; live checks in evidence/MB-26-shell-fluency.json. Added non-activating secondary-screen startup; 26 targeted UI/shell/probe tests passed. The apparent the helper model quota error came from an older worker state: the owner requested a fresh check, which succeeded (16 passed, 1 skipped). Continue with MB-27 using the helper model; normal app remains closed for upcoming identity-locked file probes. |
 | 2026-11-12 | MB-27 | 9787bce | Guarded numbered reads, per-chat durable version receipts, atomic ordered/range edits, 4 MiB checkpoints, streaming large reads, ignore-aware bounded search/tree. Full item suite 365 passed, 5 skipped. Live P-3: exact and range each 3 edits, 0 failed calls, exact CRLF/tab bytes; retain exact first on tie. See evidence/MB-27-files.md and evidence/MB-27-edit-probes.json. Continue MB-28; normal app remains closed for subsequent identity-locked evaluation. |
 | 2026-11-12 | MB-28 | d62f506 | Local ID-free binding and current policy gates; explicit stale legacy IDs still refused. Wire envelopes remove internal bookkeeping, normalize actionable/private-safe errors, cap complete JSON at 24000 bytes, and detect three identical failures. Full suite 396 passed, 5 skipped. Refinement: only local UI can create standalone mutation runs; remote mutation without an active request is refused to fence late Stop/Resume callbacks. SDK lacks trusted remote-turn attribution; do not claim ID-free detection of replaced same-chat turns. Capability response lists effect/availability instead of duplicating registered schemas. See evidence/MB-28-binding.md. Continue MB-29; app remains closed for live evaluation. |
 | 2026-11-12 | MB-29 implementation checkpoint + requested launcher | e48ce96 / 79d3238 | Contract v2 tool surface/packs and combined task/change adapters implemented; default 29 tools, maximum 35. Actual browser/MCP/REPL tests, stale receipt refresh, per-project desktop inspection and MCP config fencing pass. Full suite after launcher: 462 passed, 5 skipped; locked offline sync clean. Installed/read back desktop and Start-menu MuseBridge Harness entries; current-user local activation prevents a duplicate gadget connection. Secondary-screen startup smoke passed. MB-29 remains unticked until live v2-core success/call-count gate passes. Normal app is closed for the identity-locked evaluation. |

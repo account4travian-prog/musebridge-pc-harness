@@ -4,7 +4,7 @@
 
 Implemented one-image selection, clipboard paste, preview, removal, persistent per-conversation image drafts and acknowledged transcript preview links. The control transport sends the validated bytes through the pinned SDK's image route with text/project context and the selected remote chat. Image-only messages are supported. Uncertain sends retain the draft and do not replay; acknowledging an older image cannot clear a replacement draft.
 
-A helper model supplied immutable image admission and format/decode bounds; root integrated storage, Core/Worker and Qt UI. Formats: JPEG/PNG/GIF/WebP, SDK limit 2 MiB, application limit 20,000 pixels per dimension and 40 million cumulative decoded pixels. These are decode/work bounds, not claims of universal image safety. No silent resizing/re-encoding of selected files occurs. Clipboard images are explicitly encoded as PNG when pasted.
+The helper model supplied immutable image admission and format/decode bounds; root integrated storage, Core/Worker and Qt UI. Formats: JPEG/PNG/GIF/WebP, SDK limit 2 MiB, application limit 20,000 pixels per dimension and 40 million cumulative decoded pixels. These are decode/work bounds, not claims of universal image safety. No silent resizing/re-encoding of selected files occurs. Clipboard images are explicitly encoded as PNG when pasted.
 
 Testing exposed different Windows lstat/fstat creation/change timestamps for an unchanged file; identity comparison now uses inode/device, size and write time. The regression also still detects a real file change during the bounded read. Format mismatch, corrupt/truncated data, decode bounds, regular-file checks, draft persistence, conversation/text routing and uncertain-send handling are tested.
 

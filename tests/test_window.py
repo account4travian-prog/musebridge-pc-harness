@@ -25,7 +25,7 @@ def test_project_conversations_restore_distinct_drafts_and_history(tmp_path):
     window=Window(Worker(Store(tmp_path)))
     project=window.worker.catalog.create_project('Test',tmp_path)
     conversation=window.worker.catalog.create_conversation('Separate chat',project['id'])
-    window.input.setPlainText('main draft')
+    window.companion.panel.input.setPlainText('main draft')
     window.refresh_conversations(conversation['id']);window.switch_conversation()
     window.input.setPlainText('project draft')
     window.worker.catalog.message(conversation['id'],'stored','Muse','Persistent reply')
@@ -34,7 +34,8 @@ def test_project_conversations_restore_distinct_drafts_and_history(tmp_path):
     assert second.current_id==conversation['id']
     assert second.input.toPlainText()=='project draft'
     second.refresh_conversations('main');second.switch_conversation()
-    assert second.input.toPlainText()=='main draft'
+    assert second.current_id==conversation['id']
+    assert second.companion.panel.input.toPlainText()=='main draft'
     second.refresh_conversations(conversation['id']);second.switch_conversation()
     assert second.input.toPlainText()=='project draft'
     assert 'Persistent reply' in second.chat.toPlainText()

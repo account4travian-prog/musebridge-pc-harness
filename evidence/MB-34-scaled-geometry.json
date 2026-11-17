@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "method": "Owned non-activating secondary window; Qt scaling only, no OS settings or input changes",
+  "reports": [
+    {
+      "capture_geometry_matches": true,
+      "capture_height": 339,
+      "capture_width": 616,
+      "input_injected": false,
+      "passed": true,
+      "qt_scale": 1.25,
+      "rectangles_inside_window": true,
+      "secondary_display": true,
+      "uia_value_verified": true
+    },
+    {
+      "capture_geometry_matches": true,
+      "capture_height": 399,
+      "capture_width": 736,
+      "input_injected": false,
+      "passed": true,
+      "qt_scale": 1.5,
+      "rectangles_inside_window": true,
+      "secondary_display": true,
+      "uia_value_verified": true
+    }
+  ]
+}

@@ -56,6 +56,6 @@ def test_desktop_notifications_are_opt_in_and_periodic_attention_never_focuses_w
         refresh_attention(window);assert calls==[]  # enabling does not show old history
         window.worker.catalog.event(cid,'run.remote_reply_finished',{})
         refresh_attention(window);assert len(calls)==1 and calls[0][0]==cid
-        assert 'Background' not in calls[0][2] and window.current_id=='main'
+        assert 'Background' not in calls[0][2] and window.current_id!='main' and window.current_id!=cid
         refresh_attention(window);assert len(calls)==1
     finally:window.close()

@@ -1,0 +1,24 @@
+{
+  "wheel_sha256": "f0bf002ff3aa74d4dbb93a563e15e3285814a64744ed107535d3911146ec5882",
+  "runtime_files": {
+    "app.py": "84100c9f8b821db5da3d468e4cc27f3aa9bd8213cb7f3e45cdbdd6798b093f0e",
+    "companion.py": "a6ef7e3ac379210c89f2fd43df00d3e469b7ddd144f5917548bc8198b3b15018",
+    "companion_quick_chat.py": "bb726c7391e200575201f8376f4070184f6f255986055cbb09c0dc95024f4264",
+    "main_chat.py": "2b69caab55e192af23e4911cb6fe0a67c3ff3fdd7ba095ae25e3766eb0e6cd9e",
+    "voice.py": "54d5b35654992c2ef65260bcd3bdfa4ec3725124db9446bd7505cad8fbbef633",
+    "voice_ui.py": "bb6b06f6998438a982f9ec98467436b9c0c8e4828be9de7e0b70df7b593fe6ff",
+    "acceptance_ui.py": "51bb6a129b2a58be6fc30209a721f19fc9596f9a45dc56e79316568e40ee8c25"
+  },
+  "cutout": {
+    "sha256": "985b3f147fc9179b0abbf3620ceca42103f987f2881d770a3a1adde426253a61",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha_range": [
+      0,
+      255
+    ]
+  }
+}

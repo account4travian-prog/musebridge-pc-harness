@@ -277,6 +277,8 @@ class HookService:
                     row = existing[0]
                     results.append(self._existing_result(row))
                     continue
+                claim=getattr(self,'claim_writer',None)
+                if claim:claim(cid,context.get('run_id'),source_id)
                 invocation_id = uuid.uuid4().hex
                 now = time.time()
                 try:

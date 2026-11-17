@@ -75,11 +75,12 @@ def test_legacy_run_revision_still_refused_and_inference_cannot_cross_callback(h
     assert not router.call('file.write', {**params, 'conversation_id': cids[1], 'run_id': run}, remote=True)['ok']
 
 
-def test_registered_schema_omits_run_revision_and_makes_chat_optional(harness):
+def test_registered_schema_supports_optional_parallel_binding_and_omits_revision(harness):
     _, _, router = harness
     for name, schema in router.registration_specs().items():
         assert 'conversation_id' not in schema['required']
-        assert 'run_id' not in {**schema['required'], **schema['optional']}
+        assert 'run_id' not in schema['required']
+        if name!='bridge.health':assert 'run_id' in schema['optional']
         assert 'scope_revision' not in {**schema['required'], **schema['optional']}
     params = {'conversation_id': harness[1][0], 'path': 'new.txt', 'text': 'content'}
     router.execution.begin_run(harness[1][0])

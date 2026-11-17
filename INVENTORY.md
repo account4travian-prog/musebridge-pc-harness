@@ -1,6 +1,6 @@
 # Inventory — PC and hardware on hand
 
-> Historical hardware/software inventory. See [2026-11-11 source review](RESEARCH-2026-11-11.md) for board-profile and capability qualifications, and [MASTERPLAN.md](MASTERPLAN.md) for current use. Photo identification is not live hardware verification. the owner clarified on 2026-11-11 that he has no home automation devices currently; that work is deferred in favor of the PC harness.
+> Historical hardware/software inventory. See [2026-11-11 source review](RESEARCH-2026-11-11.md) for board-profile and capability qualifications, and [MASTERPLAN.md](MASTERPLAN.md) for current use. Photo identification is not live hardware verification. The owner clarified on 2026-11-11 that he has no home automation devices currently; that work is deferred in favor of the PC harness.
 
 _All PC facts verified live by the Muse agent over silent SSH on 2026-11-10 (idle checks first: PC idle ~4–4.3 h at the time). Hardware facts from the owner's messages and photo identification._
 
@@ -27,9 +27,9 @@ _All PC facts verified live by the Muse agent over silent SSH on 2026-11-10 (idl
 
 _Note: per the owner's 2026-11-10 correction, the agent seats above are background inventory for other projects — the MuseBridge harness does not depend on any of them._
 
-### Current the Muse agent→PC route (the lag being fixed)
+### Current Muse agent→PC route (the lag being fixed)
 
-Cloud VM → egress proxy → VPN tunnel → SSH (session 0) → scheduled task `the UIA helper task` → UIA helper in session 1 → result file → separate pull back.
+VM → egress proxy (HTTP CONNECT) → the VPN → SSH (session 0) → scheduled task `the UIA helper task` → UIA helper in session 1 → result file → separate pull back.
 Measured 2026-11-10: idle check ~5.5 s; trivial SSH command ~3 s; full UIA action 5–15 s.
 
 ## Phones (the owner's, currently unused)
@@ -41,7 +41,7 @@ Measured 2026-11-10: idle check ~5.5 s; trivial SSH command ~3 s; full UIA actio
 
 ## Microcontroller boards
 
-### Board #1 — IDENTIFIED (photo 2026-11-11, file: board-1-esp32-s3-wroom-1-n16r8.jpg)
+### Board #1 — IDENTIFIED (photo 2026-11-11, file: docs/board-1-esp32-s3.jpg)
 
 - **Module:** Espressif **ESP32-S3-WROOM-1**, variant **N16R8** — 16 MB flash, **8 MB PSRAM** (stamped variant code on the can; FCC ID 2AC7Z-ESP32S3WROOM1 — module is genuine Espressif).
 - **Board:** generic ESP32-S3 DevKitC-1-form-factor board (clone PCB). Dual USB-C: one native USB (S3 USB-OTG/serial-JTAG), one CH343 USB-UART. BOOT + RESET buttons, onboard RGB LED (WS2812-class), AMS1117 regulator, full pin headers (GPIO labels visible in photo).
@@ -51,7 +51,7 @@ Measured 2026-11-10: idle check ~5.5 s; trivial SSH command ~3 s; full UIA actio
 
 ### Boards #2+ — not yet inventoried
 
-the owner has several small boards; models unknown. Classification rules from research: ESP32-S2 = **no Bluetooth at all, unsupported**; ESP32-H2 = BLE but no Wi-Fi; classic ESP32 / S3 / C3 / C6 / C5 = fine. Non-Bluetooth boards are a dead end for augmentation (HM-10-class modules can't advertise the custom GATT service/name the Muse app scans for) — photos are the fast path to classification.
+The owner has several small boards; models unknown. Classification rules from research: ESP32-S2 = **no Bluetooth at all, unsupported**; ESP32-H2 = BLE but no Wi-Fi; classic ESP32 / S3 / C3 / C6 / C5 = fine. Non-Bluetooth boards are a dead end for augmentation (HM-10-class modules can't advertise the custom GATT service/name the Muse app scans for) — photos are the fast path to classification.
 
 ## Not on hand (would-be purchases — the owner's call only)
 

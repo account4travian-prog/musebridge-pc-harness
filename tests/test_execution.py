@@ -138,14 +138,17 @@ def test_send_keeps_its_original_conversation_while_waiting_for_lock(tmp_path):
         core=Core(None,lambda _:None,lambda *_:None,lambda _:None,catalog=catalog,conversation_id=cid)
         class Session:
             chat_subscribed=asyncio.Event();calls=[]
-            async def send_chat(self,*a,**kw):self.calls.append((a,kw))
+            async def send_chat(self,*a,**kw):
+                self.calls.append((a,kw))
+                return {'ok':True,'response':{'message_id':'user-1','session_id':kw['session_id'],'is_thread':True}}
         core.session=Session();core.session.chat_subscribed.set()
         await core.send_lock.acquire()
         pending=asyncio.create_task(core.send('original draft',conversation_id=cid))
         await asyncio.sleep(0)
         core.conversation_id='main';core.send_lock.release()
-        with pytest.raises(ConnectionError,match='Conversation changed'):await pending
-        assert core.session.calls==[] and catalog.rows('SELECT * FROM outbox')==[]
+        await pending
+        assert core.session.calls[0][1]['session_id']==cid
+        assert catalog.rows('SELECT conversation_id,state FROM outbox')==[{'conversation_id':cid,'state':'acknowledged'}]
         catalog.close()
     asyncio.run(scenario())
 

@@ -28,11 +28,11 @@ def work_rows(worker):
 def build_overview_page(w):
     page=QWidget();layout=QVBoxLayout(page);layout.setContentsMargins(28,22,28,16)
     layout.addWidget(QLabel('Work across conversations'))
-    hint=QLabel('Local jobs remain visible when you switch chats. A remote turn ending is separate from verified task completion. Queues run only in the selected conversation.');hint.setWordWrap(True);layout.addWidget(hint)
+    hint=QLabel('Local jobs remain visible when you switch chats. A remote turn ending is separate from verified task completion. Main opens through Atlas; dedicated-chat queues continue in the background.');hint.setWordWrap(True);layout.addWidget(hint)
     w.overview_tree=QTreeWidget();w.overview_tree.setHeaderLabels(['Conversation','Activity','Local jobs','Queued','Queue','Goal']);w.overview_tree.setRootIsDecorated(False);w.overview_tree.setAccessibleName('All conversation work');layout.addWidget(w.overview_tree,1)
     def open_selected():
         item=w.overview_tree.currentItem()
-        if item:w.refresh_conversations(item.data(0,Qt.ItemDataRole.UserRole));w.switch_conversation();w.tabs.setCurrentIndex(0)
+        if item:w.open_conversation(item.data(0,Qt.ItemDataRole.UserRole))
     button=QPushButton('Open selected conversation');button.clicked.connect(open_selected);layout.addWidget(button)
     w.attention_enabled=QCheckBox('Show silent attention indicators for new finished or failed work')
     w.attention_enabled.setChecked(bool(w.worker.catalog.preference('attention_indicators',default=False)))
@@ -41,8 +41,10 @@ def build_overview_page(w):
     from .attention import AttentionTracker
     def open_notification(cid):
         if cid=='__overview__':w.tabs.setCurrentIndex(8)
+        elif cid=='main':
+            w.open_conversation(cid);return
         else:
-            w.refresh_conversations(cid);w.switch_conversation();w.tabs.setCurrentIndex(0)
+            w.open_conversation(cid)
         # Only a deliberate notification click can raise the application.
         w.showNormal();w.raise_();w.activateWindow()
     w.desktop_notifier=DesktopNotifications(w,open_notification)

@@ -79,9 +79,9 @@ class DesktopRefs:
                        (' enabled' if node['enabled'] else ' disabled') for node in output)
         self.states[(cid,hwnd)]={'pid':pid,'refs':refs,'text':text}
         result={'window':{'window_handle':hwnd,'process_id':pid,'title':window.window_text()[:300],
-                          'rectangle':self.tools._rect(window)},'controls':output,'count':len(output),
+                          'rectangle':self.tools._window_rect(hwnd,window)},'controls':output,'count':len(output),
                 'focused':focused,'truncated':truncated,**changes(old.get('text',''),text,full=reset)}
-        if len(output)<5 and self.tools.ocr_enabled:
+        if len(nodes)<5 and self.tools.ocr_enabled:
             try:
                 from .windows_ocr import recognize
                 capture=self.tools._screenshot(cid,hwnd,pid)
@@ -124,6 +124,7 @@ class DesktopRefs:
             _,control,node=self.tools._select_control(window,params)
         if node is not None and (not node['visible'] or not node['enabled']):raise ValueError('Selected control is hidden or disabled')
         foreground=self.tools._foreground()
+        before_windows={item['window_handle'] for item in self.tools._process_windows(pid)}
         lock=getattr(self.tools,'execution_lock',None)
         import contextlib
         with lock if lock is not None else contextlib.nullcontext():
@@ -131,7 +132,7 @@ class DesktopRefs:
             self.tools._guard_mutation(hwnd,pid,action,foreground)
             if control is None:
                 x,y=params['x'],params['y']
-                rect=self.tools._rect(window)
+                rect=self.tools._window_rect(hwnd,window)
                 if not rect or not rect['left']<=x<rect['right'] or not rect['top']<=y<rect['bottom']:raise ValueError('Coordinates must be inside this window')
                 from pywinauto import mouse
                 if action not in ('click','double_click','right_click'):raise ValueError('Coordinates support pointer actions only')
@@ -142,8 +143,13 @@ class DesktopRefs:
                     try:method()
                     except Exception as exc:
                         if type(exc).__name__!='NoPatternInterfaceError':raise
+                        guard()
+                        self.tools._guard_mutation(hwnd,pid,action,foreground)
                         control.click_input()
-                else:control.click_input()
+                else:
+                    guard()
+                    self.tools._guard_mutation(hwnd,pid,action,foreground)
+                    control.click_input()
             elif action=='focus':control.set_focus()
             elif action=='set_text':
                 if node['control_type']!='Edit':raise ValueError('set_text is supported only for Edit controls')
@@ -162,10 +168,16 @@ class DesktopRefs:
                 keys=key_chord(params.get('keys',params.get('text',''))) if action=='keys' else ''.join(
                     '{'+char+'}' if char in '+^%~(){}' else char for char in params['text'])
                 control.set_focus()
-                guard()
-                self.tools._guard_mutation(hwnd,pid,action,foreground)
+                try:
+                    guard()
+                    self.tools._guard_mutation(hwnd,pid,action,foreground)
+                except Exception as exc:
+                    # Focusing a control already had an effect, even if keys were refused.
+                    if hasattr(exc,'no_effect'):exc.no_effect=False
+                    raise
                 send_keys(keys,with_spaces=True,with_tabs=True,with_newlines=True,vk_packet=True)
             else:raise ValueError('Unsupported desktop action')
         result=self.snapshot(cid,hwnd,window,reset=False)
+        result['new_windows']=[item for item in self.tools._process_windows(pid) if item['window_handle'] not in before_windows]
         return {'ok':True,'action':action,'window_handle':hwnd,'verified':False,
                 'verification_required':'Inspect the snapshot changes to verify the effect.',**result}

@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from .workspace import Workspace
 from .workspace_index import _spec, _ignored
@@ -33,6 +34,7 @@ class ShadowGit:
         self.lock = threading.RLock()
         self.git = shutil.which('git')
         self.cache = {}
+        self.tree_cache = {}
 
     def _repo(self, project_id):
         return self.base / (project_id + '.git')
@@ -109,51 +111,39 @@ class ShadowGit:
             if not repo.exists():
                 self._git(repo,root,'init','--bare',str(repo))
             self._regular(repo)
+            records=list(self._files(root))
+            cached=self.cache.get(project_id,{})
+            unchanged=(len(records)==len(cached) and all(
+                cached.get(path.relative_to(root).as_posix(),(None,))[0]==
+                (info.st_size,info.st_mtime_ns,info.st_ctime_ns) for path,info in records))
+            tree=self.tree_cache.get(project_id)
+            if tree and unchanged:
+                self._git(repo,root,'cat-file','-e',tree)
+                return tree
             try:parent=self._git(repo,root,'rev-parse','--verify','refs/heads/snapshots').strip()
             except OSError:parent=None
             # fast-import inline blobs avoid worktree attributes/filters and preserve CRLF.
             total = 0
             workspace=Workspace(root)
             workspace._validate_operation_path('.')
-            cached=self.cache.get(project_id,{})
             current_cache={}
             with tempfile.TemporaryFile() as stream:
                 stream.write(b'commit refs/heads/snapshots\ncommitter MuseBridge <local@invalid> 1 +0000\ndata 8\nsnapshot\n')
                 if parent:stream.write(b'from '+parent+b'\n')
                 stream.write(b'deleteall\n')
-                for path,info in self._files(root):
+                for path,info,data,blob in self._contents(root,cached,records):
                     relative = path.relative_to(root).as_posix()
                     signature=(info.st_size,info.st_mtime_ns,info.st_ctime_ns)
                     quoted=json.dumps(relative,ensure_ascii=False).encode('utf-8')
-                    old=cached.get(relative)
-                    if old and old[0]==signature:
+                    if data is None:
                         total+=info.st_size
                         if total>MAX_TOTAL:raise ValueError('Snapshot exceeds the 256 MiB run budget')
-                        stream.write(b'M 100644 '+old[1].encode()+b' '+quoted+b'\n')
-                        current_cache[relative]=old
+                        stream.write(b'M 100644 '+blob.encode()+b' '+quoted+b'\n')
+                        current_cache[relative]=(signature,blob)
                         continue
-                    # Directories were checked during traversal; prove the opened
-                    # handle's final path before reading any bytes. Avoid resolving
-                    # every ancestor again for each file in a large tree.
-                    checked = path
-                    with checked.open('rb') as source:
-                        if os.name=='nt':
-                            import msvcrt
-                            import win32file
-                            actual=win32file.GetFinalPathNameByHandle(msvcrt.get_osfhandle(source.fileno()),0)
-                            if Path(actual.removeprefix('\\\\?\\'))!=checked:
-                                raise ValueError('Snapshot file identity changed during open')
-                        elif checked.resolve()!=checked:
-                            raise ValueError('Snapshot file identity changed during open')
-                        data = source.read(MAX_FILE+1)
-                        after = os.fstat(source.fileno())
-                    if (len(data)>MAX_FILE or (info.st_size,info.st_mtime_ns)!=(after.st_size,after.st_mtime_ns)
-                            or info.st_ino and info.st_ino!=after.st_ino):
-                        raise ValueError('A file changed during snapshot; recovery is unavailable for this run')
                     total+=len(data)
                     if total>MAX_TOTAL:raise ValueError('Snapshot exceeds the 256 MiB run budget')
                     stream.write(b'M 100644 inline '+quoted+b'\ndata '+str(len(data)).encode()+b'\n'+data+b'\n')
-                    blob=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
                     current_cache[relative]=(signature,blob)
                 stream.write(b'\ndone\n')
                 stream.seek(0)
@@ -165,7 +155,42 @@ class ShadowGit:
                     creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
                 if result.returncode:raise OSError('Private snapshot import failed')
             self.cache[project_id]=current_cache
-            return self._git(repo,root,'rev-parse','refs/heads/snapshots^{tree}').decode().strip()
+            tree=self._git(repo,root,'rev-parse','refs/heads/snapshots^{tree}').decode().strip()
+            self.tree_cache[project_id]=tree
+            return tree
+
+    @staticmethod
+    def _read_record(record):
+        path,info=record
+        with path.open('rb') as source:
+            if os.name=='nt':
+                import msvcrt
+                import win32file
+                actual=win32file.GetFinalPathNameByHandle(msvcrt.get_osfhandle(source.fileno()),0)
+                if Path(actual.removeprefix('\\\\?\\'))!=path:raise ValueError('Snapshot file identity changed during open')
+            elif path.resolve()!=path:raise ValueError('Snapshot file identity changed during open')
+            data=source.read(MAX_FILE+1)
+            after=os.fstat(source.fileno())
+        if (len(data)>MAX_FILE or (info.st_size,info.st_mtime_ns)!=(after.st_size,after.st_mtime_ns)
+                or info.st_ino and info.st_ino!=after.st_ino):
+            raise ValueError('A file changed during snapshot; recovery is unavailable for this run')
+        blob=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+        return path,info,data,blob
+
+    def _contents(self,root,cached,records):
+        # Scan before I/O so a busy disk cannot consume the directory-scan budget.
+        pending=[]
+        with ThreadPoolExecutor(max_workers=4,thread_name_prefix='SnapshotRead') as pool:
+            for path,info in records:
+                relative=path.relative_to(root).as_posix()
+                old=cached.get(relative)
+                if old and old[0]==(info.st_size,info.st_mtime_ns,info.st_ctime_ns):
+                    yield path,info,None,old[1]
+                else:pending.append((path,info))
+                if len(pending)==8:
+                    yield from pool.map(self._read_record,pending)
+                    pending=[]
+            if pending:yield from pool.map(self._read_record,pending)
 
     def begin(self, cid, run_id):
         """Capture run-start state before tools can mutate the workspace."""
@@ -176,7 +201,9 @@ class ShadowGit:
             if self.catalog.rows('SELECT run_id FROM shadow_runs_v1 WHERE run_id=?',(run_id,)):return
             tree,note = None,''
             try:tree=self.snapshot(project['id'],Path(project['root']))
-            except (OSError,ValueError,subprocess.SubprocessError) as exc:note=str(exc)[:220]
+            except (OSError,ValueError,subprocess.SubprocessError) as exc:
+                from .tool_results import normalize_error
+                note=normalize_error(exc)['message'][:220]
             with self.catalog.lock,self.catalog.db:
                 self.catalog.db.execute('INSERT INTO shadow_runs_v1 VALUES(?,?,?,?,?,?,?,?)',
                     (run_id,cid,project['id'],project['root'],tree,None,'active' if tree else 'unavailable',note))
@@ -193,7 +220,9 @@ class ShadowGit:
                 if state in ('unknown','interrupted'):raise ValueError('Run outcome uncertain; automatic restore evidence is unavailable')
                 if self.router.shell._list(cid)['jobs']:raise ValueError('Commands still running at run end; use direct file checkpoints')
                 tree=self.snapshot(row['project_id'],Path(row['root']))
-            except (OSError,ValueError,subprocess.SubprocessError) as exc:note=str(exc)[:220]
+            except (OSError,ValueError,subprocess.SubprocessError) as exc:
+                from .tool_results import normalize_error
+                note=normalize_error(exc)['message'][:220]
             with self.catalog.lock,self.catalog.db:
                 self.catalog.db.execute('UPDATE shadow_runs_v1 SET end_tree=?,state=?,note=? WHERE run_id=?',
                     (tree,'finished' if tree else 'unavailable',note,run_id))
@@ -206,6 +235,22 @@ class ShadowGit:
                     final=self._blob(row,tree,item['path'])
                     if not edit or (edit['after_sha256']!=hashlib.sha256(final).hexdigest() if final is not None else bool(edit['after_exists'])):
                         self.router.finish_line.changed(cid,run_id,item['path'])
+
+    def rebase(self,cid,run_id):
+        """Capture the first write baseline after acquiring the shared-root ownership lease."""
+        self.begin(cid,run_id)
+        with self.lock:
+            row=self._row(cid,run_id)
+            if not row or row['state']!='active':return
+            try:
+                tree=self.snapshot(row['project_id'],Path(row['root']))
+                with self.catalog.lock,self.catalog.db:
+                    self.catalog.db.execute('UPDATE shadow_runs_v1 SET start_tree=? WHERE run_id=?',(tree,run_id))
+            except (OSError,ValueError,subprocess.SubprocessError) as exc:
+                from .tool_results import normalize_error
+                with self.catalog.lock,self.catalog.db:
+                    self.catalog.db.execute("UPDATE shadow_runs_v1 SET state='unavailable',note=? WHERE run_id=?",
+                        (normalize_error(exc)['message'][:220],run_id))
 
     def _row(self,cid,run_id):
         rows=self.catalog.rows('SELECT * FROM shadow_runs_v1 WHERE run_id=? AND conversation_id=?',(run_id,cid))

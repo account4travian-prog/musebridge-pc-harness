@@ -6,7 +6,7 @@ Task receipts inspect actual conversation-owned JobManager outcomes. File observ
 
 Default job-exit evidence establishes that the check process succeeded and the selected pre-run inputs stayed unchanged, not an independent semantic judgment of arbitrary prose criteria. Manual-review tasks require an explicit local Tasks-view action; ordinary automated tasks do not introduce an approval dialog.
 
-A helper model supplied TaskStore and targeted tests; root integrated checked job admission, schemas/policy, context/GoalRunner, goal-state projection and Tasks UI. Local tests include dependency/cross-chat isolation, missing or failed receipts, root/size bounds, stale content, job retries, restart and actual Windows JobManager integration. A post-job/pre-receipt file-change case was added before live acceptance.
+The helper model supplied TaskStore and targeted tests; root integrated checked job admission, schemas/policy, context/GoalRunner, goal-state projection and Tasks UI. Local tests include dependency/cross-chat isolation, missing or failed receipts, root/size bounds, stale content, job retries, restart and actual Windows JobManager integration. A post-job/pre-receipt file-change case was added before live acceptance.
 
 **Live acceptance passed:** `.local/task-probe-1794395291/report.json`. Actual Muse used task.create/update, job.start/wait with prepared input.txt, task.verify_job and plan.update. Independent local inspection found one completed task with a passed receipt. The probe then changed input.txt; the receipt became stale, the task awaited review and the goal context became paused. Zero unknown tool calls were recorded. No private project was modified; the test used a disposable project and chat.
 

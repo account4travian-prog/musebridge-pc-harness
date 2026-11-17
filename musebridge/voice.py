@@ -6,6 +6,27 @@ from musegadget.voice_call import VoiceCall
 from .pairing import get_identity
 
 
+class VoicePreflightError(ValueError):
+    """Bounded owner-facing admission message, safe to display without private IDs."""
+
+
+async def resolve_voice_target(core, cid):
+    if core.catalog:
+        row = core.catalog.conversation(cid)
+        if cid == 'main':raise VoicePreflightError('Choose a dedicated conversation for voice; Main remains text-only.')
+        if row['archived']:raise VoicePreflightError('Restore the voice conversation before calling.')
+    if getattr(core, 'parallel_enabled', False):
+        state = await core.live_chats.ensure(cid)
+        if not state.exists:raise VoicePreflightError('Send the prepared first text request in this conversation before calling.')
+        remote = core.remote_id(cid)
+    else:
+        if cid != core.conversation_id:raise VoicePreflightError('Reconnect the selected voice conversation before calling.')
+        if not core._remote_exists:raise VoicePreflightError('Send a first text request in this conversation before calling.')
+        remote = core.remote_id()
+    if not remote:raise VoicePreflightError('Voice needs a dedicated conversation with a confirmed first text request.')
+    return remote
+
+
 class MutedAudio:
     def __init__(self,audio):
         self.audio=audio
@@ -21,9 +42,10 @@ class MutedAudio:
 
 
 class VoiceController:
-    def __init__(self,core,status,audio_factory=None):
+    def __init__(self,core,status,audio_factory=None,*,conversation_id=None):
         self.core,self.status=core,status
         self.audio_factory=audio_factory
+        self.conversation_id=conversation_id or core.conversation_id
         self.audio=None
         self.call=None
         self.task=None
@@ -32,12 +54,8 @@ class VoiceController:
         core=self.core
         if core.session is None or not core.session.registered.is_set():
             raise ConnectionError('Connect to Muse first')
-        if not core._remote_exists:
-            raise ValueError('Send a first text message in this conversation before calling')
-        cid=core.conversation_id
-        thread_id=core.remote_id()
-        if core.catalog and cid == 'main':
-            raise ValueError('Use a dedicated conversation for voice to keep tools and call in the same thread')
+        cid=self.conversation_id
+        thread_id=await resolve_voice_target(core,cid)
         pairing=await core.refresh(core.store.load('pairing'))
         vms,status=await asyncio.to_thread(muse_api.fetch_vms_with_status,pairing['access_token'],
                                          muse_api.api_root(pairing.get('api_url_v2','')))
@@ -46,7 +64,7 @@ class VoiceController:
         ident=get_identity(core.store)
         session=LinkSession(noise_host=pairing.get('noise_host') or 'hatch.metaaivm.com',
             vm_id=core.vm_id,vm_auth_token=matches[0]['vm_auth_token'],
-            device=DeviceDescription(ident.node_id,'MuseBridge voice','0.7.0',{}),
+            device=DeviceDescription(ident.node_id,'MuseBridge voice','0.8.0',{}),
             run_command=lambda *args:{'ok':False,'error':'voice-only'},
             register_device=False,app_id='hatch-web')
         stop=asyncio.Event()
@@ -62,6 +80,8 @@ class VoiceController:
             self.audio=MutedAudio(factory())
             self.call=VoiceCall(session,device_id=ident.node_id,thread_id=thread_id,half_duplex=True)
             if core.router:
+                tracker=getattr(core,'run_tracker',None)
+                if tracker:tracker.stop(cid,'interrupted')
                 voice_run=core.router.execution.begin_run(cid,'voice')
                 core.router.execution.state(cid,voice_run,'acknowledged')
             self.status('Voice active · '+str(thread_id))

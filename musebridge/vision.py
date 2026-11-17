@@ -90,7 +90,12 @@ class VisionService:
                 # A HWND alone can be reused. Recheck the granted process too.
                 info=router.desktop.call('desktop.observe',{'conversation_id':cid,'window_handle':binding['window_handle']})
                 if info['window']['process_id']!=binding['process_id']:raise ValueError('Granted window process changed; select it again locally')
+                if marks:
+                    info=router.desktop.call('desktop.snapshot',{'conversation_id':cid,'window_handle':binding['window_handle']})
+                    if info['window']['process_id']!=binding['process_id']:raise ValueError('Granted window process changed; select it again locally')
                 guard();result=router.desktop.call('desktop.screenshot',{'conversation_id':cid,'window_handle':binding['window_handle']})
+                if marks and result.get('rectangle') and result['rectangle']!=info['window'].get('rectangle'):
+                    raise ValueError('Window moved since the reference snapshot; request fresh labels')
             from .machine_images import prepare
             from pathlib import Path
             image_marks=[]
@@ -101,7 +106,7 @@ class VisionService:
                 for ref,record in state.get('refs',{}).items():
                     rect=record['node'].get('rectangle')
                     if rect:image_marks.append({'ref':ref,'rectangle':{'left':rect['left']-origin['left'],'top':rect['top']-origin['top']}})
-            prepared=prepare(result['path'],Path(self.artifacts.directory if hasattr(self.artifacts,'directory') else router.desktop.artifact_dir)/('observation-'+identifier+'.jpg'),image_marks,region)
+            prepared=prepare(result['path'],router.desktop.artifact_dir/('observation-'+identifier+'.jpg'),image_marks,region)
             artifact=self.artifacts.import_file(cid,prepared['path'],source='Automatic '+source+' observation')
             if source == 'file':
                 from_bytes(self.artifacts.data(cid,artifact['id']),artifact['mime_type'],artifact['filename'])

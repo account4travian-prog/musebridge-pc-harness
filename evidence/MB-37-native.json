@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "offline_profile": true,
+  "input_injected": false,
+  "secondary_display": true,
+  "widget_within_secondary": true,
+  "panel_within_secondary": true,
+  "side_selection_preserved": true,
+  "side_draft_preserved": true,
+  "main_draft_preserved": true,
+  "foreground_unchanged": true,
+  "light_video_frames": 39,
+  "dark_video_frames": 49,
+  "reduced_motion_stopped": true,
+  "visible_with_minimized_harness": true,
+  "worker_stopped": true,
+  "all_fixture_windows_hidden": true
+}

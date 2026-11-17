@@ -53,7 +53,7 @@ def test_task_set_item_errors_and_current_ids_are_visible_without_private_fields
         "hint": "Inspect the task entries.", "call_id": "private-call-id",
         "lifecycle": {"secret": "private"},
         "items": [{"index": 1, "task_id": task_id, "error": {
-            "code": "no_project", "message": r"Choose project C:\Users\the owner\AppData\secret.txt",
+            "code": "no_project", "message": r"Choose project C:\Users\Example\AppData\secret.txt",
             "hint": "Choose the project again.",
         }}],
         "tasks": [{"task_id": task_id, "state": "active", "title": "do not include title"}],

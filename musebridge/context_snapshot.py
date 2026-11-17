@@ -17,7 +17,7 @@ from .workspace_index import list_tree
 
 
 SKILL_NAME = "gadget-musebridge-windows-pc"
-SKILL_VERSION = 1
+SKILL_VERSION = 2
 SKILL_PATH = Path(__file__).resolve().parents[1] / "docs" / "muse-skill" / SKILL_NAME / "SKILL.md"
 DEFAULT_CONTEXT_JSON_BYTES = 11_000
 _PROBE_TIMEOUT_S = 1.5
@@ -241,6 +241,8 @@ class ContextSnapshot:
         project = context.get("project")
         lines = ["# MuseBridge context", f"Conversation: {cid}",
                  f"Profile: {policy['profile']}", f"Skill: {self._skill_status()}"]
+        active_run=getattr(self.router.execution,'active_run',lambda _cid:None)(cid)
+        if active_run:lines.append('Active run: '+active_run+'. Use this run_id with this conversation_id for concurrent work.')
         if project:
             lines.extend([f"Project: {project['name']}", f"Root: {project['root']}"])
         else:

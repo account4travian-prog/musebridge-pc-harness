@@ -1,0 +1,92 @@
+{
+  "source_zip_sha256": "4675907a97aedac2786d6046bcbe9814a9a807d49cac7ac7cdba1d73d824f0e5",
+  "unchanged_source_files": 17,
+  "wheel_assets_verified": true,
+  "files": [
+    {
+      "file": "animations/atlas-idle.mp4",
+      "bytes": 480467,
+      "sha256": "0c0fb47ccd54b529143b86da010682479364332d5ddedb5d0015deb542a42cd3"
+    },
+    {
+      "file": "animations/atlas-making-something.mp4",
+      "bytes": 559523,
+      "sha256": "b219d4493ef16a4fba9a11d123781edc88956130cf75010519cb60f7d725f7e1"
+    },
+    {
+      "file": "animations/atlas-milestone.mp4",
+      "bytes": 641129,
+      "sha256": "3211d86dcd941edc742bc76738816c7522f02039cc45f2cb7664486e84d5fa53"
+    },
+    {
+      "file": "animations/atlas-working.mp4",
+      "bytes": 472587,
+      "sha256": "abf753aee382698891264fe74ea180b0b0f3f53b7fa89c732b458a70a32c5ac0"
+    },
+    {
+      "file": "animations-darkmode/atlas-idle-darkmode.mp4",
+      "bytes": 776458,
+      "sha256": "73787fe207752e17de774b000c7fe9c98df0b081aec0ddcfbb5654064727d96c"
+    },
+    {
+      "file": "animations-darkmode/atlas-making-something-darkmode.mp4",
+      "bytes": 664284,
+      "sha256": "f1107eb5f817bf6c38de022895f7437869a7797c25eb9e76c7084ac49bfe2bb7"
+    },
+    {
+      "file": "animations-darkmode/atlas-milestone-darkmode.mp4",
+      "bytes": 766424,
+      "sha256": "751e65dd1ebb22ecce39fe1a0f9e27563226cb3f4e8e0cbddcb850563b9a860c"
+    },
+    {
+      "file": "animations-darkmode/atlas-waking-darkmode.mp4",
+      "bytes": 644386,
+      "sha256": "8648e3ed83bac4205e50bccdab1301a2367b08779e5221dba5fa2183b7bbe9ac"
+    },
+    {
+      "file": "animations-darkmode/atlas-working-darkmode.mp4",
+      "bytes": 729592,
+      "sha256": "7ce3ba893f290743a7ee59fbbe547386fd3dfc08bd52b9b41337c90652e2b86b"
+    },
+    {
+      "file": "SOURCE.md",
+      "bytes": 1928,
+      "sha256": "b0293099a305e8dda48b2838c149a942c95bfafbb983a2f4c321ee216f70e242"
+    },
+    {
+      "file": "stills/atlas-state-idle-darkmode.webp",
+      "bytes": 381768,
+      "sha256": "3165b2631209f6dbb71d07b1a8d8f0aeb814aa9c5131eb38d7668f0d38438222"
+    },
+    {
+      "file": "stills/atlas-state-making-something-darkmode.webp",
+      "bytes": 262170,
+      "sha256": "900775b8a2aa0d68608675f90ca2dae8b2871092a837990a041cd40cbce65cb2"
+    },
+    {
+      "file": "stills/atlas-state-milestone-darkmode.webp",
+      "bytes": 343094,
+      "sha256": "ffaf3a3d65a00a554c9e88a1f5b3b85f91438783558bbec18a36c8db69b1f2c0"
+    },
+    {
+      "file": "stills/atlas-state-waking-darkmode.webp",
+      "bytes": 292276,
+      "sha256": "edc5ebb128203462d469c60b729af675fb20759cf076bc40d6eabd94a0d3c189"
+    },
+    {
+      "file": "stills/atlas-state-working-darkmode.webp",
+      "bytes": 366742,
+      "sha256": "d929e3d028e109b88df825422aad32dfed0732f0fdf18ec9b632713a90134a62"
+    },
+    {
+      "file": "stills/atlas-still-darkmode.webp",
+      "bytes": 306982,
+      "sha256": "b2ad53683e8d864542570793f45a28c04c0cdf9633bb9e845a3e5c1149bfd663"
+    },
+    {
+      "file": "stills/atlas-still.webp",
+      "bytes": 332198,
+      "sha256": "ae32bd9d15f1f2728c9d55623e9baf67251abc3e3b2aa68b39e7999ee8a517d4"
+    }
+  ]
+}

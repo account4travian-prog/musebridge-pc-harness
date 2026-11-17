@@ -6,7 +6,7 @@ plus a local tool layer (files, shell, git, terminals, browser, desktop UI
 automation, MCP servers, hooks) that executes on the PC under the owner's
 control. The agent stays remote; there is no local model.
 
-Version 0.7.0. Functional development build, in daily use by its owner.
+Current candidate: 0.8.0. Functional development build, in daily use by its owner.
 
 ## The problem it solves
 
@@ -40,7 +40,7 @@ Hardware: a generic ESP32-S3-WROOM-1 (N16R8, 16 MB flash, 8 MB PSRAM) DevKit
 style board with dual USB-C (a CH343 USB-UART socket, which is the one this
 project uses, plus the S3 native USB socket), Bluetooth 5.0 LE and Wi-Fi.
 
-![The ESP32-S3 board](board-1-esp32-s3-wroom-1-n16r8.jpg)
+![The ESP32-S3 board](docs/board-1-esp32-s3.jpg)
 
 ## What the app does
 
@@ -54,6 +54,9 @@ project uses, plus the S3 native USB socket), Bluetooth 5.0 LE and Wi-Fi.
 - Extensibility: local lifecycle hooks and MCP stdio servers with explicit
   per-tool grants. Desktop control sits behind an explicit profile and refuses
   to steal input while the owner is active.
+- A floating companion widget: the agent's avatar on the desktop with a
+  transparent quiet idle, hover controls and a compact quick-chat composer
+  (see `musebridge/companion.py`).
 - Pairing state and identity material are protected with Windows DPAPI. No
   telemetry, no public listener.
 
@@ -68,7 +71,7 @@ the build's acceptance receipts, kept as written (sanitized, see below).
 | Path | What it is |
 |---|---|
 | `musebridge/` | The application: UI, core worker, tools, pairing, transports |
-| `tests/` | The test suite (500+ tests) |
+| `tests/` | The test suite (600+ tests) |
 | `tools/` | Probe and evaluation harnesses used during development |
 | `tools/eval/` | The controlled evaluation suite (synthetic tasks and checker) |
 | `firmware/serial-ble/` | The ESP32-S3 serial-BLE provisioning firmware |

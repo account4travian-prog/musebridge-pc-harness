@@ -58,11 +58,11 @@ def test_overview_preserves_background_job_visibility_and_attention_is_opt_in(tm
         w.worker.queue.add(cid,'Explicit follow-up');w.worker.queue.hold(cid)
         row=next(r for r in work_rows(w.worker) if r['id']==cid)
         assert row['active_jobs']==1 and row['queued']==1 and row['queue_mode']=='Held'
-        refresh_overview(w);assert w.overview_tree.topLevelItemCount()==2
+        refresh_overview(w);assert w.overview_tree.topLevelItemCount()==3
         w.worker.catalog.event(cid,'run.remote_finished',{'run_id':'fixture'})
         refresh_attention(w);assert not w.attention_label.text()
         w.attention_enabled.setChecked(True);refresh_attention(w)
         assert 'Background' in w.attention_label.text() and '•' in w.tabs.tabText(8)
-        assert w.current_id=='main'
+        assert w.current_id!='main' and w.current_id!=cid
         w.worker.stop_work()
     finally:w.close()

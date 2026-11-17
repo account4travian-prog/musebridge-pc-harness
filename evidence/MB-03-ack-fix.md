@@ -1,6 +1,6 @@
 # MB-03 live-chat evidence and send acknowledgment fix — 2026-11-11
 
-the owner provided a screenshot showing the connected main Muse chat, two outgoing messages and Muse replies, together with a false `Send not confirmed (ValueError)` status and the already-delivered draft still in the input box. This is visible evidence of live text chat. It does not establish a bridge.health invocation or broader PC control.
+The owner provided a screenshot showing the connected main Muse chat, two outgoing messages and Muse replies, together with a false `Send not confirmed (ValueError)` status and the already-delivered draft still in the input box. This is visible evidence of live text chat. It does not establish a bridge.health invocation or broader PC control.
 
 ## Cause and change
 

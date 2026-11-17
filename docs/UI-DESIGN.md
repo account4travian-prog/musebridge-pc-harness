@@ -1,6 +1,6 @@
 # MuseBridge interface
 
-Updated 2026-11-13 for MuseBridge 0.7.0 and MB-31a.
+Updated 2026-11-16 for the MuseBridge 0.8.0 candidate, contract 2 and skill 2.
 
 The interface retains the pale workspace sidebar, white conversation pane, blue accent, compact header/tabs, readable transcript and rounded composer. Muse remains the remote agent; this is a native Qt client with no local model picker.
 
@@ -9,6 +9,18 @@ The interface retains the pale workspace sidebar, white conversation pane, blue 
 Shared styles and line icons live in `musebridge/presentation.py`; shell construction and behavior live in `shell.py` and `shell_actions.py`. Keep runtime/tool execution in feature modules. Use visible text for primary actions and accessible names for icons. Show only functional destinations, with explicit disabled, focus, selected and error states.
 
 ## Current interface
+
+MB-37 compact revision (November 16): Main's default surface is a small composer
+under the transparent Muse agent cutout. Idle hides controls/status text; hover shows
+chat, voice, activity and options. The plus menu exposes actual attachments and
+Main tools rather than a simulated plugin catalog. Escape preserves the shared
+Main draft; the outward arrow opens full history/workspace/policy. Empty margins
+are excluded from the widget's input region. The original opaque portrait videos
+are optional; reduced motion is still. Voice controls name a captured dedicated
+conversation and provide Start, mute, interruption and Hang up; view selection
+cannot retarget/end it. Owner checks prepares a disposable native Notepad and
+spoken-test session with independent file checks and owner observations.
+[Current evidence](../evidence/MB-37b-compact-and-owner-checks.md).
 
 The workspace sidebar groups project chats and offers search, local archive/restore, and new chats. Chat, Activity and Plan remain the primary tabs. The composer includes project access, goal continuation, Stop Work, voice and send. The project tools expose Changes, Queue, Terminal, local Hooks and MCP configuration; availability depends on selecting a project conversation. Queue entries are visibly ordered and status-tagged, and terminal sessions expose text input/output controls.
 
@@ -20,7 +32,9 @@ Conversation actions -> Finish-line verification provides a separate project che
 
 ## Limits and review
 
-Queue delivery is limited to the selected dedicated conversation and uncertain requests are held. Terminal rendering uses a native pyte VT screen with journaled keyboard input and debounced fit-to-pane resizing. Hooks require explicit local configuration and support before/after work tools, file edits, verification and run end; plugin imports are reviewed and disabled by default. MCP is local stdio with explicit grants and no OAuth. Native fork, steer, worker delegation and compaction APIs are unavailable in the pinned SDK. None of these features establishes speech, UIA, or broad end-to-end reliability acceptance.
+Selecting another chat changes the view while background requests/queues/visual feedback continue. Active chat rows show Working. Up to three dedicated project chats plus Main share the connection. Archive holds future queued/visual sends; restore does not resume them. Stop Work remains global; disconnect/restart and uncertain delivery hold automation. Shared Main completion cannot drive automatic continuation. Terminal rendering uses a native pyte VT screen with journaled keyboard input and debounced fit-to-pane resizing. Hooks require explicit local configuration and imports start disabled. MCP is local stdio with explicit grants and no OAuth. Native fork, steer, worker delegation and compaction APIs are unavailable in the pinned SDK. Speech, real desktop and owner usability acceptance remain separate.
+
+Changes combines direct checkpoints and eligible shell-change snapshots, suppressing equivalent duplicate rows. Restore retains later-owner-change refusal and shows unavailable/partial evidence honestly. Settings includes Windows OCR fallback (on by default), separate from desktop action permission. Teach now previews skill version 2; confirmation is recorded only after Muse reports saving it and the owner records that confirmation.
 
 The live workbench probe receipt is [MB-19–21 workbench evidence](../evidence/MB-19-git.md); individual feature receipts document observed limits. The current expansion authority is [MASTERPLAN](../MASTERPLAN.md).
 

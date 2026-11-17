@@ -18,6 +18,8 @@ def build_shell(window):
     w.setStyleSheet(STYLE);w.resize(1280,840);w.setMinimumSize(850,600)
     bar=w.menuBar()
     application=bar.addMenu('Application')
+    from .acceptance_ui import show_owner_checks
+    application.addAction('Owner checks · Notepad and voice…').triggered.connect(lambda:show_owner_checks(w))
     for text,callback,shortcut in [('New conversation',w.new_conversation,'Ctrl+N'),('New project…',w.new_project,'Ctrl+Shift+N'),
                                    ('Connection / pairing…',w.connection_menu,None),('Harness capabilities…',w.capabilities_dialog,None),('Quit',w.close,'Ctrl+Q')]:
         a=application.addAction(text);a.triggered.connect(callback)
@@ -28,6 +30,7 @@ def build_shell(window):
     a=edit.addAction('Find in conversation…');a.triggered.connect(w.find_in_chat);a.setShortcut(QKeySequence('Ctrl+F'))
     a=edit.addAction('Search conversations');a.triggered.connect(lambda:w.search.setFocus());a.setShortcut(QKeySequence('Ctrl+K'))
     view=bar.addMenu('View')
+    a=view.addAction('Show Atlas');a.triggered.connect(w.show_companion)
     a=view.addAction('Toggle sidebar');a.triggered.connect(w.toggle_sidebar);a.setShortcut(QKeySequence('Ctrl+B'))
     a=view.addAction('Archived conversations…');a.triggered.connect(w.restore_conversation)
     settings=bar.addMenu('Settings')
@@ -36,6 +39,13 @@ def build_shell(window):
     action=settings.addAction('Tool packs…')
     from .pack_settings import show_tool_packs
     action.triggered.connect(lambda:show_tool_packs(w))
+    ocr=settings.addAction('Windows OCR fallback')
+    ocr.setCheckable(True)
+    ocr.setChecked(w.worker.catalog.preference('windows_ocr',default=True))
+    def set_ocr(enabled):
+        w.worker.catalog.preference('windows_ocr',bool(enabled))
+        w.worker.router.desktop.ocr_enabled=bool(enabled)
+    ocr.toggled.connect(set_ocr)
     central=QWidget();w.setCentralWidget(central);outer=QHBoxLayout(central);outer.setContentsMargins(0,0,0,0);outer.setSpacing(0)
     w.splitter=QSplitter(Qt.Orientation.Horizontal);outer.addWidget(w.splitter)
     w.sidebar=QFrame();w.sidebar.setObjectName('sidebar');w.sidebar.setMinimumWidth(225);w.sidebar.setMaximumWidth(340)
@@ -65,7 +75,7 @@ def build_shell(window):
     w.splitter.setStretchFactor(1,1);w.splitter.setSizes([265,1015])
     header=QFrame();header.setObjectName('header');head=QVBoxLayout(header);head.setContentsMargins(28,16,24,0);head.setSpacing(4)
     title_row=QHBoxLayout();w.sidebar_toggle=tool_button('Toggle sidebar · Ctrl+B','sidebar',w.toggle_sidebar);title_row.addWidget(w.sidebar_toggle)
-    titles=QVBoxLayout();titles.setSpacing(3);w.title_label=QLabel('Main Muse chat');w.title_label.setObjectName('title');titles.addWidget(w.title_label)
+    titles=QVBoxLayout();titles.setSpacing(3);w.title_label=QLabel('Project conversation');w.title_label.setObjectName('title');titles.addWidget(w.title_label)
     w.title_label.setSizePolicy(QSizePolicy.Policy.Ignored,QSizePolicy.Policy.Preferred)
     w.project_label=QLabel('Your Muse · main conversation');w.project_label.setObjectName('subtitle');w.project_label.setSizePolicy(QSizePolicy.Policy.Ignored,QSizePolicy.Policy.Preferred);titles.addWidget(w.project_label);title_row.addLayout(titles,1)
     title_row.addWidget(tool_button('Copy latest reply','copy',w.copy_latest_reply))

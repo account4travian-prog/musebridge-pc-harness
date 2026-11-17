@@ -41,6 +41,7 @@ class EvalError(RuntimeError):
 
 def validate_label(label: str) -> str:
     """Validate a report label suitable for paths and console output."""
+    if label=='v1.0':return label  # The fixed final label required by MB-36b.
     if not isinstance(label, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,39}', label):
         raise ValueError('Label must be 1..40 letters, digits, underscores, or hyphens')
     return label

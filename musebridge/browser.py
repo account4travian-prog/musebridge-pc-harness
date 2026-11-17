@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 MAX_OBSERVE_CHARS = 12_000
 MAX_FILL_CHARS = 10_000
 MAX_SELECTOR_CHARS = 500
-MAX_SCREENSHOT_BYTES = 2 * 1024 * 1024
+MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024  # Raw capture; screen.look resizes before image admission.
 COMMAND_TIMEOUT_SECONDS = 25
 NAVIGATION_TIMEOUT_MS = 15_000
 ACTION_TIMEOUT_MS = 5_000
@@ -147,7 +147,7 @@ class BrowserTools:
         if name in ("browser.open",'browser.navigate'):
             clean["url"] = self._validate_url(params["url"])
         elif name in ('browser.snapshot','browser.act'):
-            clean.update({key:params[key] for key in ('filter','action','ref','selector','text','key','value','seconds') if key in params})
+            clean.update({key:params[key] for key in ('filter','action','ref','selector','text','key','value','amount','seconds') if key in params})
             if 'selector' in clean:clean['selector']=self._validate_selector(clean['selector'])
         elif name == "browser.eval":
             script = params['js']

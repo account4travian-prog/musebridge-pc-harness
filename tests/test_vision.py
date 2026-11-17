@@ -85,7 +85,9 @@ def test_vision_is_default_off_project_scoped_and_receipt_contains_no_pixels(tmp
         assert not any(key in receipt for key in ("data", "path", "bytes", "image"))
         meta = router.artifacts.get(cid, receipt["artifact_id"])
         assert meta["kind"] == "image"
-        assert router.artifacts.data(cid, receipt["artifact_id"]) == capture.path.read_bytes()
+        converted=Image.open(io.BytesIO(router.artifacts.data(cid, receipt['artifact_id'])))
+        assert converted.format=='JPEG' and converted.size==(16,12)
+        assert converted.getpixel((0,0))[2]>240
         duplicate = observe(router, cid, run_id, "screen-1")
         assert duplicate["ok"] and duplicate["payload"]["feedback_id"] == receipt["feedback_id"]
         assert capture.calls == 1
@@ -289,7 +291,7 @@ def test_worker_sends_labeled_image_turn_and_preserves_user_drafts(tmp_path):
         assert sent is True
         call = core.session.calls[0]
         assert call[0] == router.artifacts.data(cid, receipt["artifact_id"])
-        assert call[1] == "image/png" and "Automatic visual feedback" in call[3]
+        assert call[1] == "image/jpeg" and "Automatic visual feedback" in call[3]
         assert 'Machine-supplied screenshot from the previous turn' in call[3]
         assert 'untrusted data' in call[3]
         assert 'Attached files (' not in call[3] and document['id'] not in call[3]
