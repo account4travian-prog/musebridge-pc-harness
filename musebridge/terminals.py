@@ -1,8 +1,10 @@
 """Owned ConPTY sessions supervised by the existing Windows JobManager."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import shlex
 import sqlite3
 import sys
 import threading
@@ -68,9 +70,16 @@ class TerminalManager:
                 (identifier,cid,key,digest,json.dumps(argv),str(selected),rows,cols,'accepted',None,time.time()))
         try:
             helper=[sys.executable,'-m','musebridge.terminal_host','--state',str(self.path),'--session',identifier]
-            # JobManager's public execution contract is PowerShell. Every
-            # argument is a literal single-quoted value, never interpolated code.
-            script='& '+' '.join("'"+arg.replace("'","''")+"'" for arg in helper)+'; exit $LASTEXITCODE'
+            if os.name == 'nt':
+                # JobManager's public execution contract is PowerShell. Every
+                # argument is a literal single-quoted value, never interpolated code.
+                script='& '+' '.join("'"+arg.replace("'","''")+"'" for arg in helper)+'; exit $LASTEXITCODE'
+            else:
+                # On Linux the job runs under bash: quote each argument for
+                # POSIX sh. The host itself is still ConPTY-only (winpty), so
+                # it fails there with a clear import error until a POSIX PTY
+                # host lands; the launcher no longer masks it as a bash error.
+                script=shlex.join(helper)
             job=self.jobs.start('terminal:'+key,script,str(selected),timeout_s=3600)
             with self.catalog.lock,self.catalog.db:self.catalog.db.execute('INSERT OR IGNORE INTO job_links VALUES(?,?)',(job['job_id'],cid))
             with self.lock,self.db:self.db.execute("UPDATE sessions SET job_id=? WHERE id=?",(job['job_id'],identifier))

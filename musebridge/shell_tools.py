@@ -5,6 +5,7 @@ import math
 import time
 import uuid
 
+from .shells import default_shell
 from .workspace import Workspace
 
 
@@ -48,7 +49,7 @@ class ShellTools:
         with self.router.execution.lock:
             guard()
             snapshot = self.router.jobs.start(cid + ':' + request_id, command, cwd,
-                                              timeout_s=timeout, shell=params.get('shell', 'powershell'))
+                                              timeout_s=timeout, shell=params.get('shell', default_shell()))
             if run_id:
                 self.router.finish_line.watch_check(cid, run_id, snapshot['job_id'])
             with self.router.catalog.lock, self.router.catalog.db:

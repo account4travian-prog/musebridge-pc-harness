@@ -1,30 +1,39 @@
-"""Journaled Windows process jobs for MuseBridge.
+"""Journaled process jobs for MuseBridge.
 
 Commands are scripts passed as one argv element to a hidden, noninteractive
-Windows shell process. This module is a process supervisor, not a security
-sandbox; callers must validate working directories and commands.
+shell process. On Windows the supervisor uses job objects so a kill ends the
+whole process tree; on Linux it uses a POSIX process group for the same
+guarantee. This module is a process supervisor, not a security sandbox;
+callers must validate working directories and commands.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import os
+import signal
 import sqlite3
 import subprocess
+import sys
 import threading
 import time
 import uuid
 import math
 from pathlib import Path
 
-import win32api
-import win32con
-import win32file
-import win32job
-import win32pipe
-import win32process
-import win32event
-from .shells import command_line, normalize_shell, resolve_shell
+try:
+    import win32api
+    import win32con
+    import win32file
+    import win32job
+    import win32pipe
+    import win32process
+    import win32event
+    _WIN32 = True
+except ImportError:  # Linux: the Windows-only process APIs are unavailable.
+    win32api = win32con = win32file = win32job = win32pipe = win32process = win32event = None
+    _WIN32 = False
+from .shells import command_argv, command_line, normalize_shell, resolve_shell
 
 
 _TERMINAL = {"succeeded", "failed", "cancelled", "interrupted", "outcome_unknown"}
@@ -84,7 +93,7 @@ class JobManager:
             self._db.execute('ROLLBACK')
             raise
 
-    def start(self, request_id, command, cwd, timeout_s=300, shell='powershell'):
+    def start(self, request_id, command, cwd, timeout_s=300, shell=None):
         """Start or inspect an identical journaled request without replaying it."""
         if not isinstance(request_id, str) or not request_id.strip():
             raise ValueError("request_id must be a nonempty string")
@@ -194,6 +203,41 @@ class JobManager:
                     return value
                 self._condition.wait(max(0.0, deadline - time.monotonic()))
 
+    def _terminate_handle(self, handle, grace_s=1):
+        """End one registered job: a Windows job object, or a POSIX process group.
+
+        On POSIX the handle is a Popen started in its own session, so killing
+        its process group ends the whole tree, like TerminateJobObject.
+        ``grace_s`` bounds the wait for a SIGTERM exit before SIGKILL.
+        """
+        if sys.platform == "win32" and _WIN32:
+            try:
+                win32job.TerminateJobObject(handle, 1)
+            except Exception:
+                pass
+            return
+        try:
+            pgid = os.getpgid(handle.pid)
+        except (ProcessLookupError, PermissionError, AttributeError):
+            try:
+                handle.terminate()
+            except Exception:
+                pass
+            return
+        try:
+            os.killpg(pgid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            return
+        if grace_s <= 0:
+            return
+        try:
+            handle.wait(timeout=grace_s)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(pgid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+
     def cancel(self, job_id):
         with self._condition:
             row = self._db.execute("SELECT state FROM jobs WHERE job_id=?", (job_id,)).fetchone()
@@ -204,10 +248,7 @@ class JobManager:
             self._db.execute("UPDATE jobs SET error='cancellation requested' WHERE job_id=?", (job_id,))
             handle = self._jobs.get(job_id)
             if handle:
-                try:
-                    win32job.TerminateJobObject(handle, 1)
-                except Exception:
-                    pass
+                self._terminate_handle(handle)
             else:
                 # It may still be between accepted and assignment; the worker
                 # checks this marker before resuming its suspended process.
@@ -251,8 +292,7 @@ class JobManager:
                 self._db.execute("UPDATE jobs SET error='cancellation requested' WHERE job_id=?", (job_id,))
                 handle = self._jobs.get(job_id)
                 if handle:
-                    try: win32job.TerminateJobObject(handle, 1)
-                    except Exception: pass
+                    self._terminate_handle(handle)
                 elif state == "accepted":
                     self._db.execute("UPDATE jobs SET state='cancelled',finished=? WHERE job_id=?",
                                      (time.time(), job_id))
@@ -263,10 +303,16 @@ class JobManager:
         with self._lock:
             # Closing any remaining Job Object is the final process-tree kill.
             for handle in list(self._jobs.values()):
-                try:
-                    win32api.CloseHandle(handle)
-                except Exception:
-                    pass
+                if sys.platform == "win32" and _WIN32:
+                    try:
+                        win32api.CloseHandle(handle)
+                    except Exception:
+                        pass
+                else:
+                    try:
+                        handle.wait(timeout=1)
+                    except Exception:
+                        pass
             self._jobs.clear()
         for thread in list(self._threads):
             thread.join(2)
@@ -275,6 +321,11 @@ class JobManager:
                 self._close_db()
 
     def _run(self, job_id, command, cwd, timeout_s, shell):
+        if sys.platform == "win32" and _WIN32:
+            return self._run_windows(job_id, command, cwd, timeout_s, shell)
+        return self._run_posix(job_id, command, cwd, timeout_s, shell)
+
+    def _run_windows(self, job_id, command, cwd, timeout_s, shell):
         job = process = thread_handle = None
         job_registered = False
         read_out = write_out = null_in = None
@@ -402,6 +453,118 @@ class JobManager:
                 if self._closed and not self._threads:
                     self._close_db()
 
+    def _run_posix(self, job_id, command, cwd, timeout_s, shell):
+        """Run one job on POSIX: bash via Popen in its own session.
+
+        The process group is the kill boundary, mirroring the Windows job
+        object: terminating the group ends the shell and its children.
+        """
+        process = None
+        readers = []
+        try:
+            with self._lock:
+                row = self._db.execute("SELECT state,error FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+                if not row or row[0] != "accepted":
+                    return
+                self._db.execute("UPDATE jobs SET state='running',started=? WHERE job_id=?", (time.time(), job_id))
+                self._condition.notify_all()
+            normalized_shell, executable = resolve_shell(shell)
+            argv = command_argv(normalized_shell, executable, command[0])
+            environment = os.environ.copy()
+            environment['PYTHONIOENCODING'] = 'utf-8'
+            environment['PYTHONUTF8'] = '1'
+            process = subprocess.Popen(
+                argv, cwd=cwd, stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                start_new_session=True, env=environment)
+            with self._condition:
+                self._jobs[job_id] = process
+                cancel = self._db.execute("SELECT error,state FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+                if cancel[1] != "running" or cancel[0] == "cancellation requested":
+                    # No wait here: this runs under the condition lock, and the
+                    # poll loop below reaps the process.
+                    self._terminate_handle(process, grace_s=0)
+            reader = threading.Thread(target=self._read_stream, args=(job_id, process.stdout), daemon=True)
+            reader.start()
+            readers.append(reader)
+            started = time.monotonic()
+            timed_out = False
+            while process.poll() is None:
+                with self._lock:
+                    row = self._db.execute("SELECT error,state FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+                if row and (row[0] == "cancellation requested" or row[1] == "cancelled"):
+                    self._terminate_handle(process)
+                    break
+                if time.monotonic() - started >= timeout_s:
+                    timed_out = True
+                    self._terminate_handle(process)
+                    break
+                time.sleep(_POLL)
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
+                process.wait(timeout=3)
+            for t in readers:
+                t.join(timeout=3)
+            if any(t.is_alive() for t in readers):
+                with self._lock:
+                    self._blocked_output.add(job_id)
+            exit_code = process.returncode
+            signaled = exit_code is not None
+            with self._condition:
+                row = self._db.execute("SELECT error,state FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+                if row[1] == "cancelled" or row[0] == "cancellation requested":
+                    state = "cancelled"
+                elif timed_out:
+                    state = "failed"
+                elif not signaled:
+                    state = "outcome_unknown"
+                else:
+                    state = "succeeded" if exit_code == 0 else "failed"
+                self._db.execute("UPDATE jobs SET state=?,finished=?,exit_code=?,error=? WHERE job_id=?",
+                    (state, time.time(), int(exit_code) if exit_code is not None else None, "timed out" if timed_out else None, job_id))
+                self._condition.notify_all()
+            self._emit("Local job " + state + " (" + job_id + ")")
+        except Exception as exc:
+            if process is not None:
+                try:
+                    self._terminate_handle(process)
+                except Exception:
+                    pass
+            with self._condition:
+                row = self._db.execute("SELECT state FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+                if row and row[0] not in _TERMINAL:
+                    self._db.execute("UPDATE jobs SET state='failed',finished=?,error=? WHERE job_id=?",
+                                     (time.time(), type(exc).__name__ + ": " + str(exc)[:500], job_id))
+                self._condition.notify_all()
+            self._emit("Local job failed to start or finish (" + job_id + ")")
+        finally:
+            for t in readers:
+                t.join(timeout=0.5)
+            with self._lock:
+                self._jobs.pop(job_id, None)
+                self._threads.discard(threading.current_thread())
+                if self._closed and not self._threads:
+                    self._close_db()
+
+    def _read_stream(self, job_id, stream):
+        import codecs
+        decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
+        try:
+            while True:
+                data = stream.read1(8192) if hasattr(stream, 'read1') else stream.read(8192)
+                if not data:
+                    break
+                self._append(job_id, decoder.decode(data))
+        except (ValueError, OSError):
+            pass
+        finally:
+            self._append(job_id, decoder.decode(b'', final=True))
+
     def _read_pipe(self, job_id, handle):
         import codecs
         decoder=codecs.getincrementaldecoder('utf-8')(errors='replace')
@@ -458,10 +621,12 @@ class JobManager:
     def _release_job(self, job_id, handle, registered):
         with self._lock:
             owned = self._jobs.pop(job_id, None)
-            # close() may already have closed and removed a registered handle.
-            if owned is handle or not registered:
-                try: win32api.CloseHandle(handle)
-                except Exception: pass
+            if sys.platform == "win32" and _WIN32:
+                # close() may already have closed and removed a registered handle.
+                if owned is handle or not registered:
+                    try: win32api.CloseHandle(handle)
+                    except Exception: pass
+            # POSIX: the handle is a Popen reaped by its worker; nothing to close.
 
     def _close_db(self):
         if not self._db_closed:

@@ -487,12 +487,13 @@ class ToolRouter:
                 cid = params.get('conversation_id','main')
                 conversation = self.catalog.conversation(cid)
                 from .capabilities import manifest
+                from .shells import default_shell
                 capabilities = manifest(self,cid)
-                return {'ok':True,'payload':{'runtime':'Windows native','platform':platform.platform(),
+                return {'ok':True,'payload':{'runtime':'Linux native' if platform.system() != 'Windows' else 'Windows native','platform':platform.platform(),
                     'tools':list(self.connection_specs or self.registration_specs()),
                     'enabled_tools':[tool for tool,item in capabilities['tools'].items() if item['enabled']],
                     'project_bound':bool(conversation['project_id']),'profile':capabilities['scope']['profile'],
-                    'paused':self.paused,'shell':'powershell','sandbox':False,'contract_version':2,'skills_owner':'Muse VM',
+                    'paused':self.paused,'shell':default_shell(),'sandbox':False,'contract_version':2,'skills_owner':'Muse VM',
                     'note':'Health describes connection and admission. It does not verify that a command executed.'}}
             cid = params['conversation_id']
             context = self.catalog.context(cid)
@@ -519,7 +520,7 @@ class ToolRouter:
             elif name == 'shell.run':
                 from .shells import resolve_shell, describe_shells
                 try:
-                    resolve_shell(params.get('shell', 'powershell'))
+                    resolve_shell(params.get('shell'))
                 except RuntimeError:
                     available = [key for key, value in describe_shells().items() if value['available']]
                     return {'ok':False,'error':{'code':'shell_unavailable',

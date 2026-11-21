@@ -43,10 +43,10 @@ class PackTools:
             return {**result, 'delivery':'image_turn',
                     'hint':'The image will arrive as your next message; end this turn now.'}
         if name == 'terminal.open':
-            from .shells import resolve_shell
+            from .shells import default_shell, resolve_shell
             argv = params.get('argv')
             if argv is None:
-                shell, executable = resolve_shell(params.get('shell','powershell'))
+                shell, executable = resolve_shell(params.get('shell', default_shell()))
                 argv = [executable] + (['-NoLogo','-NoProfile'] if shell == 'powershell'
                     else ['--noprofile','--norc'] if shell == 'bash' else ['/d'])
             with router.execution.lock:

@@ -1,18 +1,30 @@
-"""Shell discovery and direct command-line construction for Windows jobs."""
+"""Shell discovery and direct command-line construction.
+
+On Windows the shells are PowerShell, cmd and Git Bash. On Linux the shell
+is the system bash; PowerShell and cmd are not available.
+"""
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 import shutil
 import subprocess
 
+from .linux_support import resolve_bash
+
 
 _SHELLS = ('powershell', 'cmd', 'bash')
 
 
+def default_shell() -> str:
+    """The shell a command uses when the caller does not name one."""
+    return 'powershell' if os.name == 'nt' else 'bash'
+
+
 def normalize_shell(shell: str | None) -> str:
-    """Normalize an accepted shell name, defaulting to PowerShell."""
-    value = 'powershell' if shell is None else shell
+    """Normalize an accepted shell name, defaulting to the platform shell."""
+    value = default_shell() if shell is None else shell
     if not isinstance(value, str):
         raise ValueError('shell must be powershell, cmd, or bash')
     value = value.casefold()
@@ -28,8 +40,10 @@ def resolve_shell(shell: str | None = None) -> tuple[str, str]:
         executable = shutil.which('pwsh.exe') or shutil.which('powershell.exe')
     elif name == 'cmd':
         executable = shutil.which('cmd.exe')
-    else:
+    elif os.name == 'nt':
         executable = _git_bash_path()
+    else:
+        executable = resolve_bash()
     if not executable:
         raise RuntimeError('shell_unavailable')
     return name, executable

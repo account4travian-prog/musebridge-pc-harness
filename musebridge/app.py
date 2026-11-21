@@ -326,8 +326,10 @@ class Worker(QObject):
             try:
                 pair(self.store, port, token, self.status.emit, self.pair_stop)
             except Exception as exc:
-                self.status.emit('Pairing stopped (' + type(exc).__name__ +
-                                 '). Check cable, port and SDK token; then retry.')
+                hint = ('Check Bluetooth, the board port (if one is used) and SDK token; then retry.'
+                        if sys.platform != 'win32' else
+                        'Check cable, port and SDK token; then retry.')
+                self.status.emit('Pairing stopped (' + type(exc).__name__ + '). ' + hint)
         self.pair_thread = threading.Thread(target=run, daemon=True)
         self.pair_thread.start()
 
@@ -524,9 +526,17 @@ class Window(ChatPresentation,ShellActions,QMainWindow):
     def pair_dialog(self):
         dialog = QDialog(self); dialog.setWindowTitle('Pair this PC with Muse')
         form = QFormLayout(dialog)
-        hint = QLabel('Connect the flashed ESP32 through its USB-UART socket.\n'
-                      'In the Muse phone app: Devices → Developer mode → Add Device.\n'
-                      'Pairing follows the SDK’s phone-confirmation policy.')
+        if sys.platform == 'win32':
+            hint_text = ('Connect the flashed ESP32 through its USB-UART socket.\n'
+                         'In the Muse phone app: Devices → Developer mode → Add Device.\n'
+                         'Pairing follows the SDK’s phone-confirmation policy.')
+        else:
+            hint_text = ('Pairing uses this PC’s own Bluetooth.\n'
+                         'In the Muse phone app: Devices → Developer mode → Add Device.\n'
+                         'Pairing follows the SDK’s phone-confirmation policy.\n'
+                         'No board port is needed unless this PC has no Bluetooth,\n'
+                         'in which case connect the flashed ESP32 and pick its port.')
+        hint = QLabel(hint_text)
         form.addRow(hint)
         ports = QComboBox()
         for port in comports():
@@ -536,7 +546,7 @@ class Window(ChatPresentation,ShellActions,QMainWindow):
         token.setPlaceholderText('mgst_… from gadgets.muse.ai'); form.addRow('SDK token', token)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(dialog.accept); buttons.rejected.connect(dialog.reject); form.addRow(buttons)
-        if dialog.exec() and ports.currentData():
+        if dialog.exec() and (ports.currentData() or sys.platform != 'win32'):
             self.worker.begin_pair(ports.currentData(), token.text().strip())
         token.clear()
 

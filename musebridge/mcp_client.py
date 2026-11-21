@@ -49,7 +49,10 @@ class MCPBridge:
 
     def configure_server(self,cid,name,command,args,grants=None,enabled=False,server_id=None):
         project=self._project(cid);path=Path(command)
-        if not path.is_absolute() or not path.is_file() or path.suffix.casefold()!='.exe':raise ValueError('Choose an absolute executable path for a local stdio server')
+        if os.name == 'nt':
+            if not path.is_absolute() or not path.is_file() or path.suffix.casefold()!='.exe':raise ValueError('Choose an absolute executable path for a local stdio server')
+        elif not path.is_absolute() or not path.is_file() or not os.access(path, os.X_OK):
+            raise ValueError('Choose an absolute executable path for a local stdio server')
         if not isinstance(name,str) or not name.strip() or len(name)>100:raise ValueError('MCP server name must be 1..100 characters')
         if not isinstance(args,list) or len(args)>50 or any(not isinstance(a,str) or '\0' in a for a in args) or len(json.dumps(args))>16000:raise ValueError('Invalid MCP server arguments')
         grants=grants or {}

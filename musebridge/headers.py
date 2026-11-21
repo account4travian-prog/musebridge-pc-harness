@@ -1,6 +1,7 @@
 """Small acknowledged chat headers; ordinary messages remain unchanged."""
 import hashlib
 import json
+import os
 
 
 def _clean(value):
@@ -48,13 +49,20 @@ def format_header(cid,project,policy,shells,summary,tools,skill_version,max_byte
     else:
         location = 'No workspace selected. Choose a workspace in MuseBridge for PC commands and files.'
     profile = {'project':'Project work','read_only':'Read only','desktop':'Desktop control'}.get(policy['profile'],policy['profile'])
-    power = shells.get('powershell',{})
-    shell = 'PowerShell '+_clip(power.get('version') or 'available',40)
-    if shells.get('bash',{}).get('available'):shell += ' (Git Bash available)'
+    if os.name == 'nt':
+        power = shells.get('powershell',{})
+        shell = 'PowerShell '+_clip(power.get('version') or 'available',40)
+        if shells.get('bash',{}).get('available'):shell += ' (Git Bash available)'
+        machine = 'Windows PC'
+    else:
+        bash = shells.get('bash',{})
+        shell = 'Bash '+_clip(bash.get('version') or 'available',40)
+        if shells.get('powershell',{}).get('available'):shell += ' (PowerShell available)'
+        machine = 'Linux PC'
     groups = []
     for prefix in ('file','shell','plan','task','browser','desktop','terminal','mcp','artifact','screen','change'):
         if any(name.startswith(prefix+'.') for name in tools):groups.append(prefix)
-    lines = ['[MuseBridge] Windows PC. '+location+'.',
+    lines = ['[MuseBridge] '+machine+'. '+location+'.',
         'Profile: '+profile+(' - STOPPED locally' if policy.get('paused') else '')+'. Shell: '+shell+'.',
         'Chat: '+_clip(cid,70)+'. Tools: '+','.join(groups)+'. Skill: gadget-musebridge-windows-pc v'+str(skill_version)+'.',
         'Read bridge.context for project instructions, plan and tasks before PC work.']
